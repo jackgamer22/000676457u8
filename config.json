@@ -1,0 +1,30 @@
+{
+    "from_emails": [
+        "example.sender1@yourdomain.com",
+        "example.sender2@yourdomain.com"
+    ],
+    "subjects": [
+        "Your weekly update",
+        "A special offer for you"
+    ],
+    "smtp_settings": [
+        {
+            "host": "smtp1.example.com",
+            "port": 587,
+            "secure": false,
+            "auth": {
+                "user": "your_smtp_user1",
+                "pass": "your_smtp_password1"
+            }
+        },
+        {
+            "host": "smtp2.example.com",
+            "port": 587,
+            "secure": false,
+            "auth": {
+                "user": "your_smtp_user2",
+                "pass": "your_smtp_password2"
+            }
+        }
+    ]
+}
