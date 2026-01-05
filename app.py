@@ -160,10 +160,11 @@ def check_and_filter_carrier_stub(phone_number):
 # --- CLI Helper Functions ---
 
 def get_sms_input():
-    """Prompts user for a phone number and a message."""
-    phone_number = input("Enter phone number: ")
+    """Prompts user for one or more phone numbers and a message."""
+    phone_numbers_str = input("Enter phone number(s) (comma-separated for multiple): ")
+    phone_numbers = [num.strip() for num in phone_numbers_str.split(',')]
     message = input("Enter message: ")
-    return phone_number, message
+    return phone_numbers, message
 
 def get_phone_number_input():
     """Prompts user for a single phone number."""
@@ -172,7 +173,12 @@ def get_phone_number_input():
 def print_menu():
     """Prints the main menu to the console."""
     os.system('cls' if os.name == 'nt' else 'clear')
-    print("\033[36mNote : I am not responsible for illegal use of the software\033[0m")
+
+    title = "Magxxic sender"
+    by_line = "Note : I am not responsible for illegal use of the software"
+
+    print(f"\033[1;35m{' ' * ((82 - len(title)) // 2)}{title}\033[0m")
+    print(f"\033[36m{by_line}\033[0m")
     print("\033[32m" + "┌" + "─" * 80 + "┐" + "\033[0m")
 
     options = [
@@ -206,16 +212,23 @@ def print_menu():
 
 def main():
     """Main function to run the CLI application."""
+
+    def send_sms_to_multiple(sms_function):
+        """Gets input and sends SMS to multiple numbers."""
+        phone_numbers, message = get_sms_input()
+        for number in phone_numbers:
+            sms_function(number, message)
+
     actions = {
-        '1': lambda: send_sms_vonage(*get_sms_input()),
-        '2': lambda: send_sms_twilio(*get_sms_input()),
-        '3': lambda: send_sms_plivo(*get_sms_input()),
-        '4': lambda: send_sms_messagebird(*get_sms_input()),
-        '7': lambda: send_sms_textbelt(*get_sms_input()),
+        '1': lambda: send_sms_to_multiple(send_sms_vonage),
+        '2': lambda: send_sms_to_multiple(send_sms_twilio),
+        '3': lambda: send_sms_to_multiple(send_sms_plivo),
+        '4': lambda: send_sms_to_multiple(send_sms_messagebird),
+        '7': lambda: send_sms_to_multiple(send_sms_textbelt),
         '8': lambda: print(check_vonage_api()),
-        '9': lambda: send_sms_telnyx(*get_sms_input()),
-        '10': lambda: send_sms_telesign(*get_sms_input()),
-        '11': lambda: send_sms_aws_sns(*get_sms_input()),
+        '9': lambda: send_sms_to_multiple(send_sms_telnyx),
+        '10': lambda: send_sms_to_multiple(send_sms_telesign),
+        '11': lambda: send_sms_to_multiple(send_sms_aws_sns),
         '12': generate_phone_number,
         '13': lambda: check_phone_number_stub(get_phone_number_input()),
         '14': lambda: filter_carrier_stub(get_phone_number_input()),
