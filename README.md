@@ -4,7 +4,7 @@ This project is a command-line interface (CLI) application that allows you to se
 
 ## Features
 
-*   **Bulk SMS Sending:** Send SMS messages to a comma-separated list of phone numbers.
+*   **Bulk SMS Sending:** Send SMS messages to a list of phone numbers, entered manually or loaded from a `.txt` file.
 *   **Multi-Provider Support:**
     *   Twilio
     *   Vonage (formerly Nexmo)
@@ -35,19 +35,13 @@ This project is a command-line interface (CLI) application that allows you to se
     ```
 
 3.  **Set environment variables:**
-    Create a `.env` file in the root of the project and add the API credentials for the services you intend to use. The application will only initialize clients for which the required environment variables are present.
+    Create a `.env` file in the root of the project and add the API credentials for the services you intend to use.
 
     ```
     # Twilio
     TWILIO_ACCOUNT_SID=your_account_sid
     TWILIO_AUTH_TOKEN=your_auth_token
     TWILIO_PHONE_NUMBER=your_twilio_phone_number
-
-    # Vonage (Nexmo)
-    VONAGE_API_KEY=your_vonage_api_key
-    VONAGE_API_SECRET=your_vonage_api_secret
-    VONAGE_PHONE_NUMBER=your_vonage_phone_number
-
     # ... (add other provider keys as needed)
     ```
 
@@ -82,12 +76,21 @@ This will launch the interactive menu for the **Magxxic sender**.
 Select :
 ```
 
-To send an SMS, select a provider. You will be prompted to enter one or more phone numbers (separated by commas) and your message.
+### Sending an SMS
 
-**Example Input for Multiple Numbers:**
+When you select an SMS provider, you will be prompted to choose an input method:
+*   **Manual Entry ('M'):** Type or paste phone numbers directly into the terminal, separated by commas.
+*   **Load from File ('F'):** Provide the path to a `.txt` file containing the phone numbers.
+
+#### Loading Numbers from a File
+
+If you choose to load from a file, create a `.txt` file (e.g., `numbers.txt`) and list all the phone numbers on a **single line**, separated by commas.
+
+**Example `numbers.txt`:**
 ```
-Enter phone number(s) (comma-separated for multiple): +1234567890, +1987654321, +15551234567
-Enter message: This is a test message.
++1234567890, +1987654321, +15551234567
 ```
 
-To exit the application, type `exit` or `quit`.
+You will then be prompted to enter the path to this file. After the numbers are loaded, you will be asked for the message you wish to send.
+
+To exit the application, type `exit` or `quit` at the main menu.

@@ -161,9 +161,29 @@ def check_and_filter_carrier_stub(phone_number):
 # --- CLI Helper Functions ---
 
 def get_sms_input():
-    """Prompts user for one or more phone numbers and a message."""
-    phone_numbers_str = input("Enter phone number(s) (comma-separated for multiple): ")
-    phone_numbers = [num.strip() for num in phone_numbers_str.split(',')]
+    """Prompts user for phone numbers (manual or file) and a message."""
+    phone_numbers = []
+    while True:
+        choice = input("Enter 'M' for manual entry or 'F' to load from a file: ").upper()
+        if choice == 'M':
+            phone_numbers_str = input("Enter phone number(s) (comma-separated): ")
+            phone_numbers = [num.strip() for num in phone_numbers_str.split(',')]
+            break
+        elif choice == 'F':
+            filepath = input("Enter the path to your .txt file: ")
+            try:
+                with open(filepath, 'r') as f:
+                    # Read the first line and split by comma
+                    phone_numbers = [num.strip() for num in f.readline().split(',')]
+                print(f"Successfully loaded {len(phone_numbers)} numbers from {filepath}")
+                break
+            except FileNotFoundError:
+                print(f"Error: File not found at '{filepath}'. Please try again.")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+        else:
+            print("Invalid choice. Please enter 'M' or 'F'.")
+
     message = input("Enter message: ")
     return phone_numbers, message
 
