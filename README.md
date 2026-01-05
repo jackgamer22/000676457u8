@@ -1,26 +1,24 @@
-# Multi-Provider SMS Sender
+# Multi-Provider SMS Sender CLI
 
-This project is a Flask-based API that allows you to send SMS messages through multiple providers. It's designed to be easily extensible with new providers.
+This project is a command-line interface (CLI) application that allows you to send SMS messages through multiple providers. It's designed to be easily extensible with new providers and features.
 
 ## Features
 
 *   Send SMS messages through various providers:
     *   Twilio
-    *   Vonage (Nexmo)
+    *   Vonage (formerly Nexmo)
     *   AWS SNS
     *   Plivo
     *   Messagebird
     *   Telnyx
     *   Telesign
     *   TextBelt (free tier)
-*   API endpoints for:
-    *   Listing available providers
-    *   Sending SMS messages
-    *   Generating random phone numbers (for testing)
-    *   Checking phone number status (mock implementation)
-    *   Filtering phone number carrier (mock implementation)
-*   Rate limiting to prevent abuse.
-*   Sanitized inputs to prevent script injection.
+*   Interactive CLI menu for easy operation.
+*   Utility functions for:
+    *   Checking provider API status (Twilio, Vonage).
+    *   Generating random phone numbers for testing.
+    *   Checking phone number status (mock implementation).
+    *   Filtering phone number carrier (mock implementation).
 
 ## Setup
 
@@ -36,7 +34,10 @@ This project is a Flask-based API that allows you to send SMS messages through m
     ```
 
 3.  **Set environment variables:**
-    Create a `.env` file in the root of the project and add the following environment variables for the providers you want to use:
+    For the script to connect to the SMS provider APIs, you must set the appropriate environment variables. You can do this by creating a `.env` file in the root of the project and adding the following key-value pairs for the services you intend to use.
+
+    *Note: The application will only initialize clients for which the required environment variables are present.*
+
     ```
     # Twilio
     TWILIO_ACCOUNT_SID=your_account_sid
@@ -72,95 +73,28 @@ This project is a Flask-based API that allows you to send SMS messages through m
     TELESIGN_PHONE_NUMBER=your_telesign_phone_number
     ```
 
-4.  **Run the application:**
-    ```bash
-    python app.py
-    ```
+## Usage
 
-## API Usage
+Run the application from your terminal:
+```bash
+python app.py
+```
 
-### List Providers
+This will launch the interactive menu.
 
-*   **Endpoint:** `/list_providers`
-*   **Method:** `GET`
-*   **Description:** Get a list of available SMS providers.
-*   **Example:**
-    ```bash
-    curl http://localhost:5000/list_providers
-    ```
+```
+ Note : I am not responsible for illegal use of the software
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ [ 1 ] Nexmo Bulk SMS Sender          [ 9  ] Telnyx Bulk SMS Sender         │
+│ [ 2 ] Twilio Bulk SMS Sender         [ 10 ] Telesign Bulk SMS Sender       │
+│ [ 3 ] Plivo Bulk SMS Sender          [ 11 ] Amazon SNS Bulk SMS Sender     │
+│ [ 4 ] Messagebird Bulk SMS Sender    [ 12 ] Phone Number Generator         │
+│ [ 5 ] Send99 Bulk SMS Sender         [ 13 ] Phone Checker [Live/Die]       │
+│ [ 6 ] Proovl Bulk SMS Sender         [ 14 ] Phone checker Filter Carrier   │
+│ [ 7 ] TextBelt Bulk SMS Sender       [ 15 ] Option 13 + 14                 │
+│ [ 8 ] Nexmo Api checker              [ 16 ] Twilio api Checker             │
+└────────────────────────────────────────────────────────────────────────────────┘
+Select :
+```
 
-### Send SMS
-
-*   **Endpoint:** `/send_sms`
-*   **Method:** `POST`
-*   **Description:** Send an SMS message.
-*   **Body:**
-    ```json
-    {
-      "phone_number": "+1234567890",
-      "message": "Hello, world!",
-      "provider_id": "2"
-    }
-    ```
-*   **Example:**
-    ```bash
-    curl -X POST -H "Content-Type: application/json" -d '{"phone_number": "+1234567890", "message": "Hello, world!", "provider_id": "2"}' http://localhost:5000/send_sms
-    ```
-
-### Generate Phone Number
-
-*   **Endpoint:** `/generate_number`
-*   **Method:** `GET`
-*   **Description:** Generate a random phone number.
-*   **Example:**
-    ```bash
-    curl http://localhost:5000/generate_number
-    ```
-
-### Check Phone Number
-
-*   **Endpoint:** `/check_number`
-*   **Method:** `POST`
-*   **Description:** Check the status of a phone number (mock implementation).
-*   **Body:**
-    ```json
-    {
-      "phone_number": "+1234567890"
-    }
-    ```
-*   **Example:**
-    ```bash
-    curl -X POST -H "Content-Type: application/json" -d '{"phone_number": "+1234567890"}' http://localhost:5000/check_number
-    ```
-
-### Filter Carrier
-
-*   **Endpoint:** `/filter_carrier`
-*   **Method:** `POST`
-*   **Description:** Filter the carrier of a phone number (mock implementation).
-*   **Body:**
-    ```json
-    {
-      "phone_number": "+1234567890"
-    }
-    ```
-*   **Example:**
-    ```bash
-    curl -X POST -H "Content-Type: application/json" -d '{"phone_number": "+1234567890"}' http://localhost:5000/filter_carrier
-    ```
-
-### Check and Filter Carrier
-
-*   **Endpoint:** `/check_and_filter`
-*   **Method:** `POST`
-*   **Description:** Check the status and filter the carrier of a phone number (mock implementation).
-*   **Body:**
-    ```json
-    {
-      "phone_number": "+1234567890"
-    }
-    ```
-*   **Example:**
-    ```bash
-    curl -X POST -H "Content-Type: application/json" -d '{"phone_number": "+1234567890"}' http://localhost:5000/check_and_filter
-    ```
+Enter the number corresponding to the action you wish to perform and follow the on-screen prompts. To exit the application, type `exit` or `quit`.
