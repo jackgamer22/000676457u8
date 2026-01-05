@@ -173,8 +173,8 @@ def get_sms_input():
             filepath = input("Enter the path to your .txt file: ")
             try:
                 with open(filepath, 'r') as f:
-                    # Read the first line and split by comma
-                    phone_numbers = [num.strip() for num in f.readline().split(',')]
+                    # Read numbers line-by-line
+                    phone_numbers = [line.strip() for line in f if line.strip()]
                 print(f"Successfully loaded {len(phone_numbers)} numbers from {filepath}")
                 break
             except FileNotFoundError:

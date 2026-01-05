@@ -84,11 +84,13 @@ When you select an SMS provider, you will be prompted to choose an input method:
 
 #### Loading Numbers from a File
 
-If you choose to load from a file, create a `.txt` file (e.g., `numbers.txt`) and list all the phone numbers on a **single line**, separated by commas.
+If you choose to load from a file, create a `.txt` file (e.g., `numbers.txt`) and list each phone number on a **new line**.
 
 **Example `numbers.txt`:**
 ```
-+1234567890, +1987654321, +15551234567
++1234567890
++1987654321
++15551234567
 ```
 
 You will then be prompted to enter the path to this file. After the numbers are loaded, you will be asked for the message you wish to send.
