@@ -2,7 +2,7 @@ import os
 import logging
 import time
 import random
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from twilio.rest import Client as TwilioClient
 import vonage
 import boto3
@@ -58,7 +58,11 @@ last_sent_time = 0
 rate_limit_seconds = 1  # Adjust as needed
 
 # Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # API Checker Functions
 def check_twilio_api():
@@ -133,26 +137,6 @@ def check_telesign_api():
             return False, f"Telesign API check failed: {response.body}"
     except Exception as e:
         return False, f"Telesign API check failed: {e}"
-
-# Available SMS Providers
-SMS_PROVIDERS = {
-    "1": {"name": "Nexmo", "function": send_sms_vonage, "api_check": check_vonage_api},
-    "2": {"name": "Twilio", "function": send_sms_twilio, "api_check": check_twilio_api},
-    "3": {"name": "Plivo", "function": send_sms_plivo, "api_check": check_plivo_api},
-    "4": {"name": "Messagebird", "function": send_sms_messagebird, "api_check": check_messagebird_api},
-    "5": {"name": "Send99", "function": None, "api_check": None},  # Placeholder - implement Send99
-    "6": {"name": "Proovl", "function": None, "api_check": None},  # Placeholder - implement Proovl
-    "7": {"name": "TextBelt", "function": send_sms_textbelt, "api_check": None},
-    "8": {"name": "Nexmo Api checker", "function": None, "api_check": check_vonage_api},
-    "9": {"name": "Telnyx", "function": send_sms_telnyx, "api_check": check_telnyx_api},
-    "10": {"name": "Telesign", "function": send_sms_telesign, "api_check": check_telesign_api},
-    "11": {"name": "Amazon SNS", "function": send_sms_aws_sns, "api_check": check_aws_sns_api},
-    "12": {"name": "Phone Number Generator", "function": None, "api_check": None},
-    "13": {"name": "Phone Checker [Live/Die]", "function": None, "api_check": None},
-    "14": {"name": "Phone checker Filter Carrier", "function": None, "api_check": None},
-    "15": {"name": "Option 13 + 14", "function": None, "api_check": None},
-    "16": {"name": "Twilio api Checker", "function": None, "api_check": check_twilio_api},
-}
 
 def generate_phone_number():
     """Generate a random phone number."""
@@ -327,6 +311,26 @@ def send_sms_textbelt(phone_number, message):
     except Exception as e:
         logging.error(f"TextBelt SMS failed to {phone_number}: {e}")
         return False
+
+# Available SMS Providers
+SMS_PROVIDERS = {
+    "1": {"name": "Vonage", "function": send_sms_vonage, "api_check": check_vonage_api},
+    "2": {"name": "Twilio", "function": send_sms_twilio, "api_check": check_twilio_api},
+    "3": {"name": "Plivo", "function": send_sms_plivo, "api_check": check_plivo_api},
+    "4": {"name": "Messagebird", "function": send_sms_messagebird, "api_check": check_messagebird_api},
+    "5": {"name": "Send99", "function": None, "api_check": None},  # Placeholder - implement Send99
+    "6": {"name": "Proovl", "function": None, "api_check": None},  # Placeholder - implement Proovl
+    "7": {"name": "TextBelt", "function": send_sms_textbelt, "api_check": None},
+    "8": {"name": "Vonage Api checker", "function": None, "api_check": check_vonage_api},
+    "9": {"name": "Telnyx", "function": send_sms_telnyx, "api_check": check_telnyx_api},
+    "10": {"name": "Telesign", "function": send_sms_telesign, "api_check": check_telesign_api},
+    "11": {"name": "Amazon SNS", "function": send_sms_aws_sns, "api_check": check_aws_sns_api},
+    "12": {"name": "Phone Number Generator", "function": None, "api_check": None},
+    "13": {"name": "Phone Checker [Live/Die]", "function": None, "api_check": None},
+    "14": {"name": "Phone checker Filter Carrier", "function": None, "api_check": None},
+    "15": {"name": "Option 13 + 14", "function": None, "api_check": None},
+    "16": {"name": "Twilio api Checker", "function": None, "api_check": check_twilio_api},
+}
 
 def sanitize_input(input_string):
     """Sanitize input to prevent script injection."""

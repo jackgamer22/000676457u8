@@ -7,3 +7,4 @@ plivo
 messagebird
 telnyx
 telesign
+setuptools
