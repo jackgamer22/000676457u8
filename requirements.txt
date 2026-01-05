@@ -7,3 +7,4 @@ messagebird
 telnyx
 telesign
 setuptools
+pyfiglet

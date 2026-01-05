@@ -14,7 +14,7 @@ This project is a command-line interface (CLI) application that allows you to se
     *   Telnyx
     *   Telesign
     *   TextBelt (free tier)
-*   **Interactive CLI:** A user-friendly, menu-driven interface for easy operation.
+*   **Beautiful CLI:** A user-friendly, menu-driven interface with a stylish ASCII art design.
 *   **Utility Functions:**
     *   Check provider API status (Twilio, Vonage).
     *   Generate random phone numbers for testing.
@@ -61,17 +61,23 @@ python app.py
 This will launch the interactive menu for the **Magxxic sender**.
 
 ```
-                   Magxxic sender
- Note : I am not responsible for illegal use of the software
+    __  ___                      _         _____                __
+   /  |/  /___ _____ __  ___  __(_)____   / ___/___  ____  ____/ /__  _____
+  / /|_/ / __ `/ __ `/ |/_/ |/_/ / ___/   \__ \/ _ \/ __ \/ __  / _ \/ ___/
+ / /  / / /_/ / /_/ />  <_>  </ / /__    ___/ /  __/ / / / /_/ /  __/ /
+/_/  /_/\__,_/\__, /_/|_/_/|_/_/\___/   /____/\___/_/ /_/\__,_/\___/_/
+             /____/
+
+           Note : I am not responsible for illegal use of the software
 ┌────────────────────────────────────────────────────────────────────────────────┐
-│ [ 1 ] Nexmo Bulk SMS Sender          [ 9  ] Telnyx Bulk SMS Sender         │
-│ [ 2 ] Twilio Bulk SMS Sender         [ 10 ] Telesign Bulk SMS Sender       │
-│ [ 3 ] Plivo Bulk SMS Sender          [ 11 ] Amazon SNS Bulk SMS Sender     │
-│ [ 4 ] Messagebird Bulk SMS Sender    [ 12 ] Phone Number Generator         │
-│ [ 7 ] TextBelt Bulk SMS Sender       [ 13 ] Phone Checker [Live/Die]       │
-│ [ 8 ] Nexmo Api checker              [ 14 ] Phone checker Filter Carrier   │
-│                                      [ 15 ] Option 13 + 14                │
-│                                      [ 16 ] Twilio api Checker            │
+│ [ 1 ] Nexmo Bulk SMS Sender          [ 7 ] TextBelt Bulk SMS Sender       │
+│ [ 9 ] Telnyx Bulk SMS Sender         [ 13] Phone Checker [Live/Die]       │
+│ [ 2 ] Twilio Bulk SMS Sender         [ 8 ] Nexmo Api checker              │
+│ [ 10] Telesign Bulk SMS Sender       [ 14] Phone checker Filter Carrier   │
+│ [ 3 ] Plivo Bulk SMS Sender           │
+│ [ 11] Amazon SNS Bulk SMS Sender     [ 15] Option 13 + 14                 │
+│ [ 4 ] Messagebird Bulk SMS Sender     │
+│ [ 12] Phone Number Generator         [ 16] Twilio api Checker             │
 └────────────────────────────────────────────────────────────────────────────────┘
 Select :
 ```

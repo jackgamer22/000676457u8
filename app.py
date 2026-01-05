@@ -9,6 +9,7 @@ from plivo.exceptions import PlivoRestError
 import messagebird
 import telnyx
 from telesign.messaging import MessagingClient
+import pyfiglet
 
 # --- Environment Variable Setup ---
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
@@ -174,11 +175,12 @@ def print_menu():
     """Prints the main menu to the console."""
     os.system('cls' if os.name == 'nt' else 'clear')
 
-    title = "Magxxic sender"
-    by_line = "Note : I am not responsible for illegal use of the software"
+    # ASCII Art Title
+    ascii_art_title = pyfiglet.figlet_format("Magxxic Sender", font="slant")
+    print(f"\033[1;35m{ascii_art_title}\033[0m")
 
-    print(f"\033[1;35m{' ' * ((82 - len(title)) // 2)}{title}\033[0m")
-    print(f"\033[36m{by_line}\033[0m")
+    by_line = "Note : I am not responsible for illegal use of the software"
+    print(f"\033[36m{' ' * ((82 - len(by_line)) // 2)}{by_line}\033[0m")
     print("\033[32m" + "┌" + "─" * 80 + "┐" + "\033[0m")
 
     options = [
