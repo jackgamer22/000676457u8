@@ -15,6 +15,11 @@ while (process.env[`SMTP_HOST_${i}`]) {
     i++;
 }
 
+const signature = process.env.SIGNATURE;
+const nameMagxxic = process.env.NAME_MAGXXIC;
+
 module.exports = {
     smtpConfigurations,
+    signature,
+    nameMagxxic,
 };

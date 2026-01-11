@@ -3,11 +3,8 @@ const chalk = require('chalk');
 const inquirer = require('inquirer');
 
 function showBanner() {
-    console.log(
-        chalk.red(
-            figlet.textSync('magxxis CEO-COF SENDER', { horizontalLayout: 'full' })
-        )
-    );
+    const banner = figlet.textSync('Magxxic CEO - CFO SENDER', { font: 'ANSI Shadow' });
+    console.log(chalk.red(banner));
 }
 
 async function getAnswers() {
@@ -29,12 +26,6 @@ async function getAnswers() {
             name: 'cloneCeoEmail',
             message: 'Clone CEO email address?',
             default: process.env.CLONE_CEO_EMAIL === 'true',
-        },
-        {
-            type: 'input',
-            name: 'signature',
-            message: 'Enter the signature to use:',
-            default: 'Best, Hayfund',
         },
     ]);
 }

