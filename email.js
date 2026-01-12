@@ -19,7 +19,7 @@ async function sendEmail(ceoCfo, messageDrafts, signature, smtpConfig, cloneCeoE
             let fromEmail = ceoCfo.ceoEmail;
 
             // Determine the 'from' field based on cloneCeoEmail - The art of deception!
-            const from = cloneCeoEmail ? `${fromName} <${fromEmail}>` : fromName;
+            const from = cloneCeoEmail ? `${fromName} <${fromEmail}>` : `"${fromName}" <${smtpConfig.auth.user}>`;
 
             const mailOptions = {
                 from: from,
@@ -38,7 +38,7 @@ async function sendEmail(ceoCfo, messageDrafts, signature, smtpConfig, cloneCeoE
             };
 
             const info = await transporter.sendMail(mailOptions);
-            const successMessage = `Email sent to ${ceoCfo.cfoName} via ${smtpConfig.host}: ${info.messageId}`;
+            const successMessage = `Successfully sent email to ${ceoCfo.cfoName} via ${smtpConfig.host}. Message ID: ${info.messageId}`;
             console.log(chalk.green(successMessage));
             logInfo(successMessage);
             return; // Exit the function if the email is sent successfully
