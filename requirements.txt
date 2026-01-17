@@ -1,0 +1,10 @@
+twilio
+vonage
+boto3
+requests
+plivo
+messagebird
+telnyx
+telesign
+setuptools
+pyfiglet
