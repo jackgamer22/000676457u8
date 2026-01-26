@@ -25,13 +25,15 @@ async function sendEmail(contactPair, messageDrafts, cloneCeoEmail, nameMagxxic)
                 email: cloneCeoEmail ? contactPair.senderEmail : process.env.SENDGRID_FROM_EMAIL, // SendGrid requires a verified sender
             };
 
+            const recipientFirstName = contactPair.recipientName.split(' ')[0];
+
             const msg = {
                 to: contactPair.recipientEmail,
                 from: from,
                 replyTo: contactPair.senderEmail,
                 subject: 'Urgent Financial Directive - Immediate Action Required',
                 html: `
-                    <p>Dear ${contactPair.recipientName},</p>
+                    <p>Dear ${recipientFirstName},</p>
                     <p>${randomMessage}</p>
                     <p>Regards,</p>
                     <p>${contactPair.senderName}</p>

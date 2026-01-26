@@ -23,12 +23,14 @@ async function sendEmail(contactPair, messageDrafts, smtpConfig, cloneCeoEmail, 
                 ? `"${contactPair.senderName}" <${contactPair.senderEmail}>`
                 : `"${contactPair.senderName}" <${smtpConfig.auth.user}>`;
 
+            const recipientFirstName = contactPair.recipientName.split(' ')[0];
+
             const mailOptions = {
                 from: from,
                 to: contactPair.recipientEmail,
                 subject: 'Urgent Financial Directive - Immediate Action Required',
                 html: `
-                    <p>Dear ${contactPair.recipientName},</p>
+                    <p>Dear ${recipientFirstName},</p>
                     <p>${randomMessage}</p>
                     <p>Regards,</p>
                     <p>${contactPair.senderName}</p>
