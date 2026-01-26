@@ -12,13 +12,14 @@ async function readContactPairs(filePath) {
     });
 
     for await (const line of rl) {
-        // Assuming CSV format: senderName,senderEmail,companyName,recipientName,recipientEmail
-        const [senderName, senderEmail, companyName, recipientName, recipientEmail] = line.split(',');
-        if (senderName && senderEmail && companyName && recipientName && recipientEmail) {
+        // Assuming CSV format: senderName,senderEmail,companyName,position,recipientName,recipientEmail
+        const [senderName, senderEmail, companyName, position, recipientName, recipientEmail] = line.split(',');
+        if (senderName && senderEmail && companyName && position && recipientName && recipientEmail) {
             contactPairs.push({
                 senderName: senderName.trim(),
                 senderEmail: senderEmail.trim(),
                 companyName: companyName.trim(),
+                position: position.trim(),
                 recipientName: recipientName.trim(),
                 recipientEmail: recipientEmail.trim(),
             });

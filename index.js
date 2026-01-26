@@ -1,4 +1,4 @@
-const { smtpConfigurations, signature, nameMagxxic } = require('./config');
+const { smtpConfigurations, nameMagxxic } = require('./config');
 const { showBanner, getAnswers } = require('./ui');
 const { sendEmail } = require('./email');
 const { readContactPairs, readMessageDrafts } = require('./file-utils');
@@ -23,7 +23,7 @@ async function main() {
     for (const pair of contactPairs) {
         const smtpConfig = smtpConfigurations[smtpIndex % smtpConfigurations.length];
 
-        await sendEmail(pair, messageDrafts, signature, smtpConfig, answers.cloneCeoEmail, nameMagxxic);
+        await sendEmail(pair, messageDrafts, smtpConfig, answers.cloneCeoEmail, nameMagxxic);
 
         smtpIndex++;
 

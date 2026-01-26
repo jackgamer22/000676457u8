@@ -66,10 +66,8 @@ if /i "%add_another%"=="y" (
 
 echo.
 echo --- Email Content Configuration ---
-set /p signature="Enter the signature to use (e.g., Best, Hayfund): "
 set /p name_magxxic="Enter the Magxxic name to display: "
 
-echo SIGNATURE="%signature%">> .env
 echo NAME_MAGXXIC="%name_magxxic%">> .env
 echo.>> .env
 

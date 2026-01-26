@@ -5,7 +5,7 @@ const { logInfo, logError } = require('./logger');
 const MAX_RETRIES = 3;
 
 // Function to send an email to a recipient from a sender.
-async function sendEmail(contactPair, messageDrafts, signature, smtpConfig, cloneCeoEmail, nameMagxxic) {
+async function sendEmail(contactPair, messageDrafts, smtpConfig, cloneCeoEmail, nameMagxxic) {
     let retries = 0;
     while (retries < MAX_RETRIES) {
         try {
@@ -32,8 +32,7 @@ async function sendEmail(contactPair, messageDrafts, signature, smtpConfig, clon
                     <p>${randomMessage}</p>
                     <p>Regards,</p>
                     <p>${contactPair.senderName}</p>
-                    <p>CEO, ${contactPair.companyName}</p>
-                    <p>${signature}</p>
+                    <p>${contactPair.position}, ${contactPair.companyName}</p>
                     <p>${nameMagxxic}</p>
                 `,
                 replyTo: contactPair.senderEmail,
