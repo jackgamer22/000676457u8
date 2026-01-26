@@ -67,12 +67,17 @@ set smtp_count=1
 echo --- Adding SMTP Server #%smtp_count% ---
 set /p smtp_host="Enter SMTP Host (e.g., smtp.gmail.com): "
 set /p smtp_port="Enter SMTP Port (e.g., 587): "
+set /p smtp_secure="Use secure connection (TLS)? (y/n): "
 set /p smtp_user="Enter SMTP Username (your email): "
 set /p smtp_pass="Enter SMTP Password/App Password: "
 
 echo SMTP_HOST_%smtp_count%=%smtp_host%>> .env
 echo SMTP_PORT_%smtp_count%=%smtp_port%>> .env
-echo SMTP_SECURE_%smtp_count%=false>> .env
+if /i "%smtp_secure%"=="y" (
+    echo SMTP_SECURE_%smtp_count%=true>> .env
+) else (
+    echo SMTP_SECURE_%smtp_count%=false>> .env
+)
 echo SMTP_USER_%smtp_count%=%smtp_user%>> .env
 echo SMTP_PASS_%smtp_count%=%smtp_pass%>> .env
 echo.>> .env

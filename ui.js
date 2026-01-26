@@ -36,6 +36,20 @@ async function getAnswers() {
             message: 'Clone CEO email address?',
             default: process.env.CLONE_CEO_EMAIL === 'true',
         },
+        {
+            type: 'input',
+            name: 'replyTo',
+            message: 'Enter the Reply-To email address:',
+            validate: function (value) {
+                const pass = value.match(
+                    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+                );
+                if (pass) {
+                    return true;
+                }
+                return 'Please enter a valid email address.';
+            },
+        },
     ]);
 }
 

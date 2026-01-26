@@ -7,7 +7,7 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const MAX_RETRIES = 3;
 
 // Function to send an email to a recipient from a sender using SendGrid.
-async function sendEmail(contactPair, messageDrafts, cloneCeoEmail, nameMagxxic) {
+async function sendEmail(contactPair, messageDrafts, nameMagxxic, replyTo) {
     let retries = 0;
     while (retries < MAX_RETRIES) {
         try {
@@ -22,7 +22,7 @@ async function sendEmail(contactPair, messageDrafts, cloneCeoEmail, nameMagxxic)
 
             const from = {
                 name: contactPair.senderName,
-                email: cloneCeoEmail ? contactPair.senderEmail : process.env.SENDGRID_FROM_EMAIL, // SendGrid requires a verified sender
+                email: process.env.SENDGRID_FROM_EMAIL, // SendGrid requires a verified sender
             };
 
             const recipientFirstName = contactPair.recipientName.split(' ')[0];
@@ -30,7 +30,7 @@ async function sendEmail(contactPair, messageDrafts, cloneCeoEmail, nameMagxxic)
             const msg = {
                 to: contactPair.recipientEmail,
                 from: from,
-                replyTo: contactPair.senderEmail,
+                replyTo: replyTo,
                 subject: 'Urgent Financial Directive - Immediate Action Required',
                 html: `
                     <p>Dear ${recipientFirstName},</p>

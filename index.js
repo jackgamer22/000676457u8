@@ -31,9 +31,9 @@ async function main() {
     for (const pair of contactPairs) {
         if (process.env.MAIL_PROVIDER === 'smtp') {
             const smtpConfig = smtpConfigurations[smtpIndex % smtpConfigurations.length];
-            await emailService.sendEmail(pair, messageDrafts, smtpConfig, answers.cloneCeoEmail, nameMagxxic);
+            await emailService.sendEmail(pair, messageDrafts, smtpConfig, answers.cloneCeoEmail, nameMagxxic, answers.replyTo);
         } else {
-            await emailService.sendEmail(pair, messageDrafts, answers.cloneCeoEmail, nameMagxxic);
+            await emailService.sendEmail(pair, messageDrafts, answers.cloneCeoEmail, nameMagxxic, answers.replyTo);
         }
 
         smtpIndex++;
