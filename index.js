@@ -33,7 +33,7 @@ async function main() {
             const smtpConfig = smtpConfigurations[smtpIndex % smtpConfigurations.length];
             await emailService.sendEmail(pair, messageDrafts, smtpConfig, answers.cloneCeoEmail, nameMagxxic, answers.replyTo);
         } else {
-            await emailService.sendEmail(pair, messageDrafts, answers.cloneCeoEmail, nameMagxxic, answers.replyTo);
+            await emailService.sendEmail(pair, messageDrafts, nameMagxxic, answers.replyTo);
         }
 
         smtpIndex++;
