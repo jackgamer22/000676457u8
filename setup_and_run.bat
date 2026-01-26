@@ -36,13 +36,32 @@ echo.
 :: ----------------------------------------------------------------------------
 :: 2. Configure .env file
 :: ----------------------------------------------------------------------------
-echo Now, let's configure your SMTP settings.
+echo Now, let's configure your email settings.
 echo This will create a .env file with your credentials.
 echo.
 
 :: Clear the existing .env file
 if exist .env del .env
 
+:choose_provider
+echo Choose your email provider:
+echo 1. SMTP
+echo 2. SendGrid
+set /p provider_choice="Enter your choice (1 or 2): "
+
+if "%provider_choice%"=="1" (
+    echo MAIL_PROVIDER=smtp>> .env
+    goto :configure_smtp
+)
+if "%provider_choice%"=="2" (
+    echo MAIL_PROVIDER=sendgrid>> .env
+    goto :configure_sendgrid
+)
+
+echo Invalid choice. Please try again.
+goto :choose_provider
+
+:configure_smtp
 set smtp_count=1
 :add_smtp_server
 echo --- Adding SMTP Server #%smtp_count% ---
@@ -63,7 +82,16 @@ if /i "%add_another%"=="y" (
     set /a smtp_count+=1
     goto :add_smtp_server
 )
+goto :configure_common
 
+:configure_sendgrid
+set /p sendgrid_api_key="Enter your SendGrid API Key: "
+echo SENDGRID_API_KEY=%sendgrid_api_key%>> .env
+set /p sendgrid_from_email="Enter your verified SendGrid From Email: "
+echo SENDGRID_FROM_EMAIL=%sendgrid_from_email%>> .env
+goto :configure_common
+
+:configure_common
 echo.
 echo --- Email Content Configuration ---
 set /p name_magxxic="Enter the Magxxic name to display: "
@@ -72,7 +100,12 @@ echo NAME_MAGXXIC="%name_magxxic%">> .env
 echo.>> .env
 
 echo --- Sending Options ---
-echo CLONE_CEO_EMAIL=true>> .env
+set /p clone_ceo_email="Clone CEO email address? (y/n): "
+if /i "%clone_ceo_email%"=="y" (
+    echo CLONE_CEO_EMAIL=true>> .env
+) else (
+    echo CLONE_CEO_EMAIL=false>> .env
+)
 echo.
 
 echo Configuration saved to .env file.

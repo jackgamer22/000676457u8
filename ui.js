@@ -12,9 +12,16 @@ function showBanner() {
 async function getAnswers() {
     return await inquirer.prompt([
         {
+            type: 'list',
+            name: 'provider',
+            message: 'Choose your email provider:',
+            choices: ['SMTP', 'SendGrid'],
+            default: 'SMTP',
+        },
+        {
             type: 'input',
             name: 'ceoCfoFilePath',
-            message: 'Enter the path to the CEO-CFO data file:',
+            message: 'Enter the path to the contact data file:',
             default: 'ceo_cfo_data.csv',
         },
         {

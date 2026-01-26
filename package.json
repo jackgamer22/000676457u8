@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/jackgamer22/000676457u8#readme",
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "chalk": "^4.1.2",
     "dotenv": "^17.2.3",
     "figlet": "^1.9.4",
