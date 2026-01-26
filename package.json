@@ -22,7 +22,7 @@
     "chalk": "^4.1.2",
     "dotenv": "^17.2.3",
     "figlet": "^1.9.4",
-    "inquirer": "^13.1.0",
+    "inquirer": "^8.0.0",
     "nodemailer": "^7.0.12"
   }
 }

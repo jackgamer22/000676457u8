@@ -3,8 +3,10 @@ const chalk = require('chalk');
 const inquirer = require('inquirer');
 
 function showBanner() {
-    const banner = figlet.textSync('Magxxic CEO - CFO SENDER', { font: 'ANSI Shadow' });
-    console.log(chalk.red(banner));
+    const magxxicPart = figlet.textSync('Magxxic', { font: 'Graffiti' });
+    const senderPart = figlet.textSync('S3nder', { font: 'Standard' });
+    console.log(chalk.red(magxxicPart));
+    console.log(chalk.red(senderPart));
 }
 
 async function getAnswers() {
