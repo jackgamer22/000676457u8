@@ -1,9 +1,9 @@
 const fs = require('fs');
 const readline = require('readline');
 
-// Function to read CEO-CFO pairs from a CSV file - The juicier the data, the better!
-async function readCeoCfoPairs(filePath) {
-    const ceoCfoPairs = [];
+// Function to read sender-recipient pairs from a CSV file.
+async function readContactPairs(filePath) {
+    const contactPairs = [];
     const fileStream = fs.createReadStream(filePath);
 
     const rl = readline.createInterface({
@@ -12,17 +12,20 @@ async function readCeoCfoPairs(filePath) {
     });
 
     for await (const line of rl) {
-        const [ceoName, ceoEmail, companyName, cfoName, cfoEmail] = line.split(',');
-        ceoCfoPairs.push({
-            ceoName: ceoName.trim(),
-            ceoEmail: ceoEmail.trim(),
-            companyName: companyName.trim(),
-            cfoName: cfoName.trim(),
-            cfoEmail: cfoEmail.trim(),
-        });
+        // Assuming CSV format: senderName,senderEmail,companyName,recipientName,recipientEmail
+        const [senderName, senderEmail, companyName, recipientName, recipientEmail] = line.split(',');
+        if (senderName && senderEmail && companyName && recipientName && recipientEmail) {
+            contactPairs.push({
+                senderName: senderName.trim(),
+                senderEmail: senderEmail.trim(),
+                companyName: companyName.trim(),
+                recipientName: recipientName.trim(),
+                recipientEmail: recipientEmail.trim(),
+            });
+        }
     }
 
-    return ceoCfoPairs;
+    return contactPairs;
 }
 
 // Function to read message drafts from a text file - Injecting chaos one line at a time!
@@ -54,6 +57,6 @@ async function readMessageDrafts(filePath) {
 }
 
 module.exports = {
-    readCeoCfoPairs,
+    readContactPairs,
     readMessageDrafts,
 };
