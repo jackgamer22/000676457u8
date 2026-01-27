@@ -1,7 +1,7 @@
 const { smtpConfigurations, nameMagxxic } = require('./config');
 const { showBanner, getAnswers } = require('./ui');
 const { getEmailService } = require('./email');
-const { readContactPairs, readMessageDrafts } = require('./file-utils');
+const { readContactPairs, readMessageDrafts, generateSenderEmail } = require('./file-utils');
 const chalk = require('chalk');
 
 async function main() {
@@ -33,9 +33,12 @@ async function main() {
     for (const pair of contactPairs) {
         let result = false;
         if (answers.dryRun) {
+            const senderEmail = generateSenderEmail(pair.senderName, pair.companyName);
+            const fromAddress = answers.cloneCeoEmail ? senderEmail : 'Configured SMTP User';
+
             console.log(chalk.yellow('--- Dry Run: Email Preview ---'));
             console.log(chalk.cyan(`To: ${pair.recipientName} <${pair.recipientEmail}>`));
-            console.log(chalk.cyan(`From: ${pair.senderName} <${pair.senderEmail}>`));
+            console.log(chalk.cyan(`From: ${pair.senderName} <${fromAddress}>`));
             console.log(chalk.cyan(`Subject: ${answers.subject}`));
             console.log(chalk.cyan(`Reply-To: ${answers.replyTo}`));
             if (answers.attachmentPath) {
@@ -44,12 +47,23 @@ async function main() {
             console.log(chalk.yellow('----------------------------'));
             result = true;
         } else {
+            const options = {
+                contactPair: pair,
+                messageDrafts,
+                cloneCeoEmail: answers.cloneCeoEmail,
+                nameMagxxic,
+                replyTo: answers.replyTo,
+                subject: answers.subject,
+                minDelay: answers.minDelay,
+                maxDelay: answers.maxDelay,
+                attachmentPath: answers.attachmentPath,
+            };
+
             if (process.env.MAIL_PROVIDER === 'smtp') {
-                const smtpConfig = smtpConfigurations[smtpIndex % smtpConfigurations.length];
-                result = await emailService.sendEmail(pair, messageDrafts, smtpConfig, !answers.hideFromEmail, nameMagxxic, answers.replyTo, answers.subject, answers.minDelay, answers.maxDelay, answers.attachmentPath);
-            } else {
-                result = await emailService.sendEmail(pair, messageDrafts, nameMagxxic, answers.replyTo, answers.subject, answers.minDelay, answers.maxDelay, answers.attachmentPath);
+                options.smtpConfig = smtpConfigurations[smtpIndex % smtpConfigurations.length];
             }
+
+            result = await emailService.sendEmail(options);
         }
 
         if (result) {

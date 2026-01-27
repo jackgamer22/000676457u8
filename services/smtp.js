@@ -1,13 +1,27 @@
 const nodemailer = require('nodemailer');
 const chalk = require('chalk');
 const { logInfo, logError } = require('../logger');
+const { generateSenderEmail } = require('../file-utils');
 
 const MAX_RETRIES = 3;
 
 const fs = require('fs');
 
 // Function to send an email to a recipient from a sender.
-async function sendEmail(contactPair, messageDrafts, smtpConfig, cloneCeoEmail, nameMagxxic, replyTo, subject, minDelay, maxDelay, attachmentPath) {
+async function sendEmail(options) {
+    const {
+        contactPair,
+        messageDrafts,
+        smtpConfig,
+        cloneCeoEmail,
+        nameMagxxic,
+        replyTo,
+        subject,
+        minDelay,
+        maxDelay,
+        attachmentPath,
+    } = options;
+
     let retries = 0;
     while (retries < MAX_RETRIES) {
         try {
@@ -21,8 +35,10 @@ async function sendEmail(contactPair, messageDrafts, smtpConfig, cloneCeoEmail, 
                                          .replace(/{recipientName}/g, contactPair.recipientName)
                                          .replace(/{companyName}/g, contactPair.companyName);
 
+            const senderEmail = generateSenderEmail(contactPair.senderName, contactPair.companyName);
+
             const from = cloneCeoEmail
-                ? `"${contactPair.senderName}" <${contactPair.senderEmail}>`
+                ? `"${contactPair.senderName}" <${senderEmail}>`
                 : `"${contactPair.senderName}" <${smtpConfig.auth.user}>`;
 
             const recipientFirstName = contactPair.recipientName.split(' ')[0];

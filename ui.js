@@ -38,8 +38,8 @@ async function getAnswers() {
         },
         {
             type: 'confirm',
-            name: 'hideFromEmail',
-            message: "Hide 'From' email address (show name only)?",
+            name: 'cloneCeoEmail',
+            message: 'Do you want to dynamically generate the sender\'s email address (e.g., firstname.lastname@company.com)?',
             default: true,
         },
         {
