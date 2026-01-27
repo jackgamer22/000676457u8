@@ -6,13 +6,15 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const MAX_RETRIES = 3;
 
+const fs = require('fs');
+
 // Function to send an email to a recipient from a sender using SendGrid.
-async function sendEmail(contactPair, messageDrafts, nameMagxxic, replyTo) {
+async function sendEmail(contactPair, messageDrafts, nameMagxxic, replyTo, subject, minDelay, maxDelay, attachmentPath) {
     let retries = 0;
     while (retries < MAX_RETRIES) {
         try {
-            const randomDelay = Math.floor(Math.random() * (15000 - 7000 + 1)) + 7000;
-            await new Promise(resolve => setTimeout(resolve, randomDelay));
+            const randomDelay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+            await new Promise(resolve => setTimeout(resolve, randomDelay * 1000));
 
             let randomMessage = messageDrafts[Math.floor(Math.random() * messageDrafts.length)];
             // Replace placeholders
@@ -31,7 +33,7 @@ async function sendEmail(contactPair, messageDrafts, nameMagxxic, replyTo) {
                 to: contactPair.recipientEmail,
                 from: from,
                 replyTo: replyTo,
-                subject: 'Urgent Financial Directive - Immediate Action Required',
+                subject: subject,
                 html: `
                     <p>Dear ${recipientFirstName},</p>
                     <p>${randomMessage}</p>
@@ -42,11 +44,23 @@ async function sendEmail(contactPair, messageDrafts, nameMagxxic, replyTo) {
                 `,
             };
 
+            if (attachmentPath) {
+                const attachment = fs.readFileSync(attachmentPath).toString('base64');
+                msg.attachments = [
+                    {
+                        content: attachment,
+                        filename: attachmentPath.split('/').pop(),
+                        type: 'application/octet-stream',
+                        disposition: 'attachment',
+                    },
+                ];
+            }
+
             await sgMail.send(msg);
             const successMessage = `Successfully sent email to ${contactPair.recipientName} from ${contactPair.senderName} via SendGrid.`;
             console.log(chalk.green(successMessage));
             logInfo(successMessage);
-            return;
+            return true;
         } catch (error) {
             retries++;
             const errorMessage = `Error sending email to ${contactPair.recipientName} via SendGrid (attempt ${retries}/${MAX_RETRIES}): ${error.message}`;
@@ -56,6 +70,7 @@ async function sendEmail(contactPair, messageDrafts, nameMagxxic, replyTo) {
                 const finalErrorMessage = `Failed to send email to ${contactPair.recipientName} after ${MAX_RETRIES} attempts.`;
                 console.error(chalk.red(finalErrorMessage));
                 logError(finalErrorMessage);
+                return false;
             }
         }
     }

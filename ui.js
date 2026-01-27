@@ -12,6 +12,12 @@ function showBanner() {
 async function getAnswers() {
     return await inquirer.prompt([
         {
+            type: 'confirm',
+            name: 'dryRun',
+            message: 'Run in Dry Run mode (preview emails without sending)?',
+            default: true,
+        },
+        {
             type: 'list',
             name: 'provider',
             message: 'Choose your email provider:',
@@ -49,6 +55,29 @@ async function getAnswers() {
                 }
                 return 'Please enter a valid email address.';
             },
+        },
+        {
+            type: 'input',
+            name: 'subject',
+            message: 'Enter the email subject:',
+            default: 'Urgent Financial Directive - Immediate Action Required',
+        },
+        {
+            type: 'number',
+            name: 'minDelay',
+            message: 'Enter the minimum delay between emails (in seconds):',
+            default: 7,
+        },
+        {
+            type: 'number',
+            name: 'maxDelay',
+            message: 'Enter the maximum delay between emails (in seconds):',
+            default: 15,
+        },
+        {
+            type: 'input',
+            name: 'attachmentPath',
+            message: 'Enter the path to the attachment (leave blank for no attachment):',
         },
     ]);
 }

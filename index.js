@@ -26,14 +26,36 @@ async function main() {
     }
 
     let smtpIndex = 0;
+    let successCount = 0;
+    let failCount = 0;
 
     // Iterate through each contact pair and send an email.
     for (const pair of contactPairs) {
-        if (process.env.MAIL_PROVIDER === 'smtp') {
-            const smtpConfig = smtpConfigurations[smtpIndex % smtpConfigurations.length];
-            await emailService.sendEmail(pair, messageDrafts, smtpConfig, answers.cloneCeoEmail, nameMagxxic, answers.replyTo);
+        let result = false;
+        if (answers.dryRun) {
+            console.log(chalk.yellow('--- Dry Run: Email Preview ---'));
+            console.log(chalk.cyan(`To: ${pair.recipientName} <${pair.recipientEmail}>`));
+            console.log(chalk.cyan(`From: ${pair.senderName} <${pair.senderEmail}>`));
+            console.log(chalk.cyan(`Subject: ${answers.subject}`));
+            console.log(chalk.cyan(`Reply-To: ${answers.replyTo}`));
+            if (answers.attachmentPath) {
+                console.log(chalk.cyan(`Attachment: ${answers.attachmentPath}`));
+            }
+            console.log(chalk.yellow('----------------------------'));
+            result = true;
         } else {
-            await emailService.sendEmail(pair, messageDrafts, nameMagxxic, answers.replyTo);
+            if (process.env.MAIL_PROVIDER === 'smtp') {
+                const smtpConfig = smtpConfigurations[smtpIndex % smtpConfigurations.length];
+                result = await emailService.sendEmail(pair, messageDrafts, smtpConfig, answers.cloneCeoEmail, nameMagxxic, answers.replyTo, answers.subject, answers.minDelay, answers.maxDelay, answers.attachmentPath);
+            } else {
+                result = await emailService.sendEmail(pair, messageDrafts, nameMagxxic, answers.replyTo, answers.subject, answers.minDelay, answers.maxDelay, answers.attachmentPath);
+            }
+        }
+
+        if (result) {
+            successCount++;
+        } else {
+            failCount++;
         }
 
         smtpIndex++;
@@ -41,6 +63,12 @@ async function main() {
         // Pause between emails to avoid rate limiting.
         await new Promise(resolve => setTimeout(resolve, 2000));
     }
+
+    console.log(chalk.green('--- Sending Complete ---'));
+    console.log(chalk.green(`Successful emails: ${successCount}`));
+    console.log(chalk.red(`Failed emails: ${failCount}`));
+    console.log(chalk.blue('Check sender.log for more details.'));
+    console.log(chalk.green('------------------------'));
 }
 
 main().catch(console.error);

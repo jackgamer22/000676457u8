@@ -4,14 +4,16 @@ const { logInfo, logError } = require('../logger');
 
 const MAX_RETRIES = 3;
 
+const fs = require('fs');
+
 // Function to send an email to a recipient from a sender.
-async function sendEmail(contactPair, messageDrafts, smtpConfig, cloneCeoEmail, nameMagxxic, replyTo) {
+async function sendEmail(contactPair, messageDrafts, smtpConfig, cloneCeoEmail, nameMagxxic, replyTo, subject, minDelay, maxDelay, attachmentPath) {
     let retries = 0;
     while (retries < MAX_RETRIES) {
         try {
             const transporter = nodemailer.createTransport(smtpConfig);
-            const randomDelay = Math.floor(Math.random() * (15000 - 7000 + 1)) + 7000;
-            await new Promise(resolve => setTimeout(resolve, randomDelay));
+            const randomDelay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+            await new Promise(resolve => setTimeout(resolve, randomDelay * 1000));
 
             let randomMessage = messageDrafts[Math.floor(Math.random() * messageDrafts.length)];
             // Replace placeholders
@@ -28,7 +30,7 @@ async function sendEmail(contactPair, messageDrafts, smtpConfig, cloneCeoEmail, 
             const mailOptions = {
                 from: from,
                 to: contactPair.recipientEmail,
-                subject: 'Urgent Financial Directive - Immediate Action Required',
+                subject: subject,
                 html: `
                     <p>Dear ${recipientFirstName},</p>
                     <p>${randomMessage}</p>
@@ -40,11 +42,19 @@ async function sendEmail(contactPair, messageDrafts, smtpConfig, cloneCeoEmail, 
                 replyTo: replyTo,
             };
 
+            if (attachmentPath) {
+                mailOptions.attachments = [
+                    {
+                        path: attachmentPath,
+                    },
+                ];
+            }
+
             const info = await transporter.sendMail(mailOptions);
             const successMessage = `Successfully sent email to ${contactPair.recipientName} from ${contactPair.senderName} via ${smtpConfig.host}. Message ID: ${info.messageId}`;
             console.log(chalk.green(successMessage));
             logInfo(successMessage);
-            return;
+            return true;
         } catch (error) {
             retries++;
             const errorMessage = `Error sending email to ${contactPair.recipientName} (attempt ${retries}/${MAX_RETRIES}): ${error.message}`;
@@ -54,6 +64,7 @@ async function sendEmail(contactPair, messageDrafts, smtpConfig, cloneCeoEmail, 
                 const finalErrorMessage = `Failed to send email to ${contactPair.recipientName} after ${MAX_RETRIES} attempts.`;
                 console.error(chalk.red(finalErrorMessage));
                 logError(finalErrorMessage);
+                return false;
             }
         }
     }
