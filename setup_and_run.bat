@@ -105,8 +105,8 @@ echo NAME_MAGXXIC="%name_magxxic%">> .env
 echo.>> .env
 
 echo --- Sending Options ---
-set /p clone_ceo_email="Clone CEO email address? (y/n): "
-if /i "%clone_ceo_email%"=="y" (
+set /p hide_from_email="Hide 'From' email address (show name only)? (y/n): "
+if /i "%hide_from_email%"=="n" (
     echo CLONE_CEO_EMAIL=true>> .env
 ) else (
     echo CLONE_CEO_EMAIL=false>> .env

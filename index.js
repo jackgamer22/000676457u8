@@ -46,7 +46,7 @@ async function main() {
         } else {
             if (process.env.MAIL_PROVIDER === 'smtp') {
                 const smtpConfig = smtpConfigurations[smtpIndex % smtpConfigurations.length];
-                result = await emailService.sendEmail(pair, messageDrafts, smtpConfig, answers.cloneCeoEmail, nameMagxxic, answers.replyTo, answers.subject, answers.minDelay, answers.maxDelay, answers.attachmentPath);
+                result = await emailService.sendEmail(pair, messageDrafts, smtpConfig, !answers.hideFromEmail, nameMagxxic, answers.replyTo, answers.subject, answers.minDelay, answers.maxDelay, answers.attachmentPath);
             } else {
                 result = await emailService.sendEmail(pair, messageDrafts, nameMagxxic, answers.replyTo, answers.subject, answers.minDelay, answers.maxDelay, answers.attachmentPath);
             }

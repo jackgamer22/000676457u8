@@ -38,9 +38,9 @@ async function getAnswers() {
         },
         {
             type: 'confirm',
-            name: 'cloneCeoEmail',
-            message: 'Clone CEO email address?',
-            default: process.env.CLONE_CEO_EMAIL === 'true',
+            name: 'hideFromEmail',
+            message: "Hide 'From' email address (show name only)?",
+            default: true,
         },
         {
             type: 'input',
