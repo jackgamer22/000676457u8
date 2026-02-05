@@ -1,0 +1,29 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jackgamer22/000676457u8.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jackgamer22/000676457u8/issues"
+  },
+  "homepage": "https://github.com/jackgamer22/000676457u8#readme",
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "chalk": "^4.1.2",
+    "dotenv": "^17.2.3",
+    "figlet": "^1.9.4",
+    "inquirer": "^8.0.0",
+    "nodemailer": "^7.0.12"
+  }
+}
