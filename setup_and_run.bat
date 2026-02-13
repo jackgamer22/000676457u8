@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 :: ============================================================================
-:: BrainiacMonoOS V2.0 - Setup and Run Script for Windows
+:: Magxxic Sender V2.0 - Setup and Run Script for Windows
 :: ============================================================================
 :: This script will:
 :: 1. Install the necessary Node.js dependencies.
@@ -15,13 +15,14 @@ setlocal enabledelayedexpansion
 :: ============================================================================
 
 echo.
-echo Welcome to the BrainiacMonoOS Setup Script!
+echo Welcome to the Magxxic Sender Setup Script!
 echo This script will help you configure and run the application.
 echo.
 
 :: ----------------------------------------------------------------------------
 :: 1. Install Dependencies
 :: ----------------------------------------------------------------------------
+cd magxxic-sender
 echo Installing Node.js dependencies...
 call npm install
 if %errorlevel% neq 0 (
@@ -119,9 +120,9 @@ echo.
 :: ----------------------------------------------------------------------------
 :: 3. Run the Application
 :: ----------------------------------------------------------------------------
-echo Starting BrainiacMonoOS...
+echo Starting Magxxic Sender...
 echo.
-call node brainiac.js
+call node main.js
 
 echo.
 echo The script has finished. Press any key to exit.

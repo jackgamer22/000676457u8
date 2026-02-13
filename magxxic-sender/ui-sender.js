@@ -3,9 +3,9 @@ const chalk = require('chalk');
 const inquirer = require('inquirer');
 
 /**
- * Displays the BrainiacMonoOS banner and system information.
+ * Displays the Magxxic Sender banner and system information.
  */
-function showBrainiacBanner() {
+function showMagxxicBanner() {
     // Top logo part
     console.log(chalk.red(`    @@@@    @@@@@@@@@@@@@@@@@@@@    @@@@`));
     console.log(chalk.red(`    @@@@    @@@@@@@@@@@@@@@@@@@@    @@@@`));
@@ -16,8 +16,8 @@ function showBrainiacBanner() {
     console.log(chalk.red(`    @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@`));
 
     // Main text banner
-    const bannerText = figlet.textSync('BrainiacMonoOS', { font: 'Slant' });
-    console.log(chalk.cyan(bannerText));
+    const bannerText = figlet.textSync('Magxxic Sender', { font: 'Slant' });
+    console.log(chalk.red(bannerText));
 
     console.log(chalk.green(' >>> PROXY-ONLY DIRECT-TO-MX DELIVERY SYSTEM - STATUS: ARMED <<<'));
     console.log(chalk.green(' [RFC-2822] [DKIM-SIGNED] [SOCKS5-CHAIN] [ZERO-SMTP-RELAY]'));
@@ -28,7 +28,7 @@ function showBrainiacBanner() {
 /**
  * Prompts the user for configuration options.
  */
-async function getBrainiacAnswers() {
+async function getMagxxicAnswers() {
     return await inquirer.prompt([
         {
             type: 'confirm',
@@ -115,7 +115,7 @@ function logCampaignStart(config) {
 }
 
 module.exports = {
-    showBrainiacBanner,
-    getBrainiacAnswers,
+    showMagxxicBanner,
+    getMagxxicAnswers,
     logCampaignStart
 };

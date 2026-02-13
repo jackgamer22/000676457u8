@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { showBrainiacBanner, getBrainiacAnswers, logCampaignStart } = require('./brainiac-ui');
+const { showMagxxicBanner, getMagxxicAnswers, logCampaignStart } = require('./ui-sender');
 const { readContactPairs, generateSenderEmail } = require('./file-utils');
 const { getEmailService } = require('./email');
 const chalk = require('chalk');
@@ -24,11 +24,11 @@ async function loadTemplates(dir) {
 }
 
 async function main() {
-    showBrainiacBanner();
+    showMagxxicBanner();
 
-    // We'll use a modified getAnswers from ui.js or just stick with brainiac-ui for now
+    // We'll use a modified getAnswers from ui.js or just stick with magxxic-ui for now
     // Actually, I'll merge the logic.
-    const answers = await getBrainiacAnswers();
+    const answers = await getMagxxicAnswers();
     process.env.MAIL_PROVIDER = answers.provider.toLowerCase();
 
     const emailService = getEmailService();
@@ -110,7 +110,7 @@ async function main() {
     }
 
     console.log(chalk.green(' ' + '='.repeat(80)));
-    console.log(chalk.green(` OPERATION COMPLETE - BRAINIAC MONO OS V2.0 (${answers.provider})`));
+    console.log(chalk.green(` OPERATION COMPLETE - MAGXXIC SENDER V2.0 (${answers.provider})`));
     console.log(chalk.green(' ' + '='.repeat(80)));
     console.log(chalk.white(' [DELIVERY STATISTICS]'));
     console.log(chalk.white(`  DELIVERED:   ${successCount} emails`));
