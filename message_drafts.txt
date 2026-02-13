@@ -1,0 +1,9 @@
+This is the first message draft.
+
+---
+
+Here is another message draft. It can be multiple lines.
+
+---
+
+A third and final message draft.
