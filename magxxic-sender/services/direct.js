@@ -42,7 +42,9 @@ async function sendEmail(options) {
         minDelay,
         maxDelay,
         attachmentPath,
-        ehloHost = 'localhost'
+        ehloHost = 'localhost',
+        xOriginatingIp,
+        customHeaders
     } = options;
 
     const recipientEmail = contactPair.recipientEmail;
@@ -95,12 +97,26 @@ async function sendEmail(options) {
                 ? `"${contactPair.senderName}" <${senderEmail}>`
                 : `"${contactPair.senderName}" <postmaster@${contactPair.companyName.toLowerCase().replace(/\s/g, '')}.com>`;
 
+            const headers = {};
+            if (xOriginatingIp) {
+                headers['X-Originating-Ip'] = xOriginatingIp;
+            }
+            if (customHeaders) {
+                customHeaders.split(',').forEach(header => {
+                    const [key, value] = header.split(':');
+                    if (key && value) {
+                        headers[key.trim()] = value.trim();
+                    }
+                });
+            }
+
             const mailOptions = {
                 from: from,
                 to: recipientEmail,
                 subject: subject,
                 html: htmlContent,
                 replyTo: replyTo,
+                headers: headers
             };
 
             if (attachmentPath) {

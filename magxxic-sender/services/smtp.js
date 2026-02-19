@@ -20,6 +20,8 @@ async function sendEmail(options) {
         minDelay,
         maxDelay,
         attachmentPath,
+        xOriginatingIp,
+        customHeaders,
     } = options;
 
     let retries = 0;
@@ -43,6 +45,19 @@ async function sendEmail(options) {
 
             const recipientFirstName = contactPair.recipientName.split(' ')[0];
 
+            const headers = {};
+            if (xOriginatingIp) {
+                headers['X-Originating-Ip'] = xOriginatingIp;
+            }
+            if (customHeaders) {
+                customHeaders.split(',').forEach(header => {
+                    const [key, value] = header.split(':');
+                    if (key && value) {
+                        headers[key.trim()] = value.trim();
+                    }
+                });
+            }
+
             const mailOptions = {
                 from: from,
                 to: contactPair.recipientEmail,
@@ -56,6 +71,7 @@ async function sendEmail(options) {
                     <p>${nameMagxxic}</p>
                 `,
                 replyTo: replyTo,
+                headers: headers
             };
 
             if (attachmentPath) {

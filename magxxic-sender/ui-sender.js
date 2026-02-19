@@ -96,6 +96,27 @@ async function getMagxxicAnswers() {
             type: 'input',
             name: 'attachmentPath',
             message: 'Attachment path (optional):',
+        },
+        {
+            type: 'input',
+            name: 'xOriginatingIp',
+            message: 'X-Originating-Ip (optional):',
+        },
+        {
+            type: 'input',
+            name: 'customHeaders',
+            message: 'Custom MIME Headers (key:value, comma separated, e.g. X-Priority:1, X-Military-Grade:A):',
+        },
+        {
+            type: 'input',
+            name: 'trackingBaseUrl',
+            message: 'Link Tracking Base URL (optional):',
+        },
+        {
+            type: 'confirm',
+            name: 'enableSpamFilterBypass',
+            message: 'Enable Spam Filter Bypass (content randomization)?',
+            default: true,
         }
     ]);
 }

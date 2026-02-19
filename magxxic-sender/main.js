@@ -75,6 +75,24 @@ async function main() {
         const pair = contactPairs[i];
         const progress = `[${String(i + 1).padStart(3, '0')}/${String(contactPairs.length).padStart(3, '0')}]`;
 
+        // Pre-process templates for this recipient
+        let processedTemplates = templates.map(t => {
+            let processed = t;
+            // Link Tracking
+            if (answers.trackingBaseUrl) {
+                processed = processed.replace(/href="([^"]+)"/g, (match, url) => {
+                    const trackedUrl = `${answers.trackingBaseUrl}?url=${encodeURIComponent(url)}&to=${encodeURIComponent(pair.recipientEmail)}`;
+                    return `href="${trackedUrl}"`;
+                });
+            }
+            // Spam Filter Bypass (Randomization)
+            if (answers.enableSpamFilterBypass) {
+                const randomString = Math.random().toString(36).substring(7);
+                processed = processed.replace('</body>', `<div style="display:none !important; font-size:1px;">${randomString}</div></body>`);
+            }
+            return processed;
+        });
+
         if (answers.dryRun) {
             const senderEmail = generateSenderEmail(pair.senderName, pair.companyName);
             console.log(chalk.yellow(`${progress} DRY RUN -> ${pair.recipientEmail} (from: ${senderEmail} | ${answers.provider})`));
@@ -82,7 +100,7 @@ async function main() {
         } else {
             const options = {
                 contactPair: pair,
-                messageDrafts: templates,
+                messageDrafts: processedTemplates,
                 cloneCeoEmail: true,
                 nameMagxxic,
                 replyTo: answers.replyTo,
@@ -91,7 +109,9 @@ async function main() {
                 maxDelay: answers.maxDelay,
                 attachmentPath: answers.attachmentPath,
                 proxy: answers.proxy,
-                ehloHost: answers.ehloHost
+                ehloHost: answers.ehloHost,
+                xOriginatingIp: answers.xOriginatingIp,
+                customHeaders: answers.customHeaders
             };
 
             if (process.env.MAIL_PROVIDER === 'smtp') {
