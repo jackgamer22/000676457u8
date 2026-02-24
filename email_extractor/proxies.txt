@@ -1,0 +1,4 @@
+# Add your SOCKS5 proxies here in host:port format
+# Example:
+# 127.0.0.1:1080
+# proxy.example.com:8080

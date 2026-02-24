@@ -6,6 +6,11 @@ from colorama import Fore, Style, init
 from collections import defaultdict
 import sys
 import getpass
+import uuid
+import hashlib
+import random
+import socks
+import socket
 
 # Initialize colorama
 init(autoreset=True)
@@ -26,11 +31,48 @@ BANNER = f"""
 {Style.RESET_ALL}
 """
 
+class SocksIMAP4SSL(imaplib.IMAP4_SSL):
+    """IMAP4_SSL client that routes traffic through a SOCKS proxy."""
+    def __init__(self, host, port, proxy_addr, proxy_port, proxy_type=socks.SOCKS5):
+        self.proxy_addr = proxy_addr
+        self.proxy_port = int(proxy_port)
+        self.proxy_type = proxy_type
+        imaplib.IMAP4_SSL.__init__(self, host, port)
+
+    def _create_socket(self):
+        sock = socks.socksocket()
+        sock.set_proxy(self.proxy_type, self.proxy_addr, self.proxy_port)
+        sock.connect((self.host, self.port))
+        return self.ssl_context.wrap_socket(sock, server_hostname=self.host)
+
+def get_hwid():
+    """Generates a simple Hardware ID based on the system's MAC address."""
+    return hashlib.sha256(str(uuid.getnode()).encode()).hexdigest().upper()[:16]
+
+def verify_license():
+    """Asks for a license token and verifies it (simple placeholder logic)."""
+    hwid = get_hwid()
+    print(f"{Fore.CYAN}YOUR HWID: {Fore.WHITE}{hwid}")
+    print(f"{Fore.YELLOW}Please contact admin to get your token for this HWID.")
+
+    # In a real system, the token would be a hash of the HWID + a secret salt
+    # For this example, we'll use a simple "SECRET_" + HWID logic
+    expected_token = hashlib.sha256((hwid + "MAGXXIC_SALT").encode()).hexdigest().upper()[:12]
+
+    # For user convenience during testing, if they enter "DEBUG", it passes
+    token = input(f"{Fore.YELLOW}Enter Token: {Fore.WHITE}").strip()
+
+    if token == expected_token or token == "DEBUG":
+        print(f"{Fore.GREEN}License Verified Successfully! Welcome back.")
+        return True
+    else:
+        print(f"{Fore.RED}Invalid Token! Please check with admin.")
+        return False
+
 def get_mx_server(domain):
     """Retrieves the MX server for a given domain."""
     try:
         answers = dns.resolver.resolve(domain, 'MX')
-        # Get the highest priority record (lowest preference value)
         mx_records = sorted(answers, key=lambda r: r.preference)
         return str(mx_records[0].exchange).rstrip('.')
     except Exception:
@@ -39,31 +81,37 @@ def get_mx_server(domain):
 def print_dashboard(stats):
     """Prints a live dashboard line."""
     sys.stdout.write('\r')
-    status_line = f"{Fore.CYAN}Processed: {stats['processed']} | {Fore.GREEN}Found: {stats['found']} | {Fore.YELLOW}Current Folder: {stats['current_folder']}"
+    status_line = f"{Fore.CYAN}Processed: {stats['processed']} | {Fore.GREEN}Found: {stats['found']} | {Fore.YELLOW}Proxy: {stats['current_proxy']}"
     sys.stdout.write(status_line)
     sys.stdout.flush()
 
-def extract_emails_from_mailbox(username, password, imap_server):
-    """
-    Logs into an email inbox and extracts email addresses,
-    grouping them by domain and MX server with live reporting.
-    """
-    print(BANNER)
-    print(f"{Fore.BLUE}{'='*80}")
-    print(f"{Fore.YELLOW}Target Account: {Fore.WHITE}{username}")
-    print(f"{Fore.YELLOW}IMAP Server:    {Fore.WHITE}{imap_server}")
-    print(f"{Fore.BLUE}{'='*80}\n")
+def load_proxies():
+    """Loads proxies from proxies.txt."""
+    try:
+        with open("proxies.txt", "r") as f:
+            proxies = [line.strip() for line in f if line.strip()]
+        return proxies
+    except FileNotFoundError:
+        return []
 
-    stats = {'processed': 0, 'found': 0, 'current_folder': 'inbox'}
+def extract_emails_from_mailbox(username, password, imap_server, proxy=None):
+    """
+    Logs into an email inbox and extracts email addresses.
+    """
+    stats = {'processed': 0, 'found': 0, 'current_proxy': proxy if proxy else 'Direct'}
     all_emails = set()
 
     try:
-        # Connect to the IMAP server
-        mail = imaplib.IMAP4_SSL(imap_server)
+        if proxy:
+            # Simple host:port parsing
+            p_host, p_port = proxy.split(':')
+            mail = SocksIMAP4SSL(imap_server, 993, p_host, p_port)
+        else:
+            mail = imaplib.IMAP4_SSL(imap_server)
+
         mail.login(username, password)
         mail.select("inbox")
 
-        # Search for all emails
         result, data = mail.search(None, "ALL")
         email_ids = data[0].split()
 
@@ -75,14 +123,12 @@ def extract_emails_from_mailbox(username, password, imap_server):
             email_message = email.message_from_string(raw_email_string)
 
             found_in_msg = set()
-            # Extract email addresses from headers
             for header in ['From', 'To', 'Cc', 'Bcc']:
                 header_value = email_message[header]
                 if header_value:
                     emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", str(header_value))
                     found_in_msg.update(emails)
 
-            # Extract email addresses from body
             for part in email_message.walk():
                 if part.get_content_type() in ["text/plain", "text/html"]:
                     try:
@@ -91,8 +137,7 @@ def extract_emails_from_mailbox(username, password, imap_server):
                             body = payload.decode('utf-8', 'ignore')
                             emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", body)
                             found_in_msg.update(emails)
-                    except Exception:
-                        continue
+                    except: continue
 
             for em in found_in_msg:
                 if em not in all_emails:
@@ -103,52 +148,68 @@ def extract_emails_from_mailbox(username, password, imap_server):
 
         mail.close()
         mail.logout()
-
-        print(f"\n\n{Fore.GREEN}{Style.BRIGHT}Extraction Phase Complete!")
-        print(f"{Fore.CYAN}Processing MX Lookups and Grouping Results...")
-
-        # Grouping phase
-        grouped_data = defaultdict(lambda: defaultdict(list)) # {mx_server: {domain: [emails]}}
-        domain_to_mx = {}
-
-        sorted_emails = sorted(list(all_emails))
-        for em in sorted_emails:
-            domain = em.split('@')[-1].lower()
-            if domain not in domain_to_mx:
-                domain_to_mx[domain] = get_mx_server(domain)
-            mx = domain_to_mx[domain]
-            grouped_data[mx][domain].append(em)
-
-        # Final Organized Report
-        print(f"\n{Fore.MAGENTA}{Style.BRIGHT}--- FINAL RESULTS REPORT ---")
-        for mx, domains in sorted(grouped_data.items()):
-            print(f"\n{Fore.YELLOW}Server (MX): {Fore.WHITE}{mx}")
-            for domain, emails in sorted(domains.items()):
-                print(f"  {Fore.CYAN}Domain: {Fore.WHITE}{domain} {Fore.CYAN}({len(emails)} emails)")
-                for e in emails:
-                    print(f"    {Fore.BLACK}{Style.BRIGHT}» {Fore.WHITE}{e}")
-
-        print(f"\n{Fore.BLUE}{'='*80}")
-        print(f"{Fore.GREEN}{Style.BRIGHT}TOTAL UNIQUE EMAILS EXTRACTED: {len(all_emails)}")
-        print(f"{Fore.BLUE}{'='*80}")
-
-        return list(all_emails)
+        return all_emails
 
     except Exception as e:
-        print(f"\n{Fore.RED}{Style.BRIGHT}CRITICAL ERROR: {e}")
-        return []
+        print(f"\n{Fore.RED}Error: {e}")
+        return all_emails
+
+def save_results(emails):
+    """Saves the extracted emails to results.txt."""
+    if not emails:
+        print(f"{Fore.YELLOW}No emails found to save.")
+        return
+
+    filename = "results.txt"
+    with open(filename, "w") as f:
+        for em in sorted(list(emails)):
+            f.write(em + "\n")
+    print(f"\n{Fore.GREEN}Successfully saved {len(emails)} unique emails to {filename}")
 
 if __name__ == "__main__":
-    # Interactive input for better usability
     print(BANNER)
+    if not verify_license():
+        sys.exit()
+
     try:
         user = input(f"{Fore.YELLOW}Enter Email: {Fore.WHITE}")
         pwd = getpass.getpass(f"{Fore.YELLOW}Enter Password: {Fore.WHITE}")
-        server = input(f"{Fore.YELLOW}Enter IMAP Server (e.g. imap.gmail.com): {Fore.WHITE}")
+        server = input(f"{Fore.YELLOW}Enter IMAP Server: {Fore.WHITE}")
 
-        if user and pwd and server:
-            extract_emails_from_mailbox(user, pwd, server)
+        proxies = load_proxies()
+        selected_proxy = random.choice(proxies) if proxies else None
+
+        if selected_proxy:
+            print(f"{Fore.CYAN}Using Proxy: {selected_proxy}")
         else:
-            print(f"{Fore.RED}Missing credentials. Exiting.")
+            print(f"{Fore.YELLOW}No proxies found in proxies.txt. Using direct connection.")
+
+        emails = extract_emails_from_mailbox(user, pwd, server, selected_proxy)
+
+        if emails:
+            print(f"\n\n{Fore.GREEN}Extraction Complete. Total Unique Found: {len(emails)}")
+
+            # Grouping by MX for reporting
+            print(f"{Fore.CYAN}Performing MX Lookups for Report...")
+            grouped_data = defaultdict(lambda: defaultdict(list))
+            domain_to_mx = {}
+            for em in sorted(list(emails)):
+                domain = em.split('@')[-1].lower()
+                if domain not in domain_to_mx:
+                    domain_to_mx[domain] = get_mx_server(domain)
+                mx = domain_to_mx[domain]
+                grouped_data[mx][domain].append(em)
+
+            for mx, domains in sorted(grouped_data.items()):
+                print(f"\n{Fore.YELLOW}Server (MX): {Fore.WHITE}{mx}")
+                for dom, ems in sorted(domains.items()):
+                    print(f"  {Fore.CYAN}Domain: {Fore.WHITE}{dom} ({len(ems)})")
+
+            save_choice = input(f"\n{Fore.YELLOW}Do you want to save results? (y/n): {Fore.WHITE}").lower()
+            if save_choice == 'y':
+                save_results(emails)
+        else:
+            print(f"\n{Fore.RED}No emails extracted.")
+
     except KeyboardInterrupt:
-        print(f"\n{Fore.YELLOW}Operation cancelled by user.")
+        print(f"\n{Fore.YELLOW}Exiting...")
