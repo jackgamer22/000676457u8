@@ -11,6 +11,7 @@ import hashlib
 import random
 import socks
 import socket
+import ssl
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
@@ -36,11 +37,11 @@ BANNER = f"""
 
 class SocksIMAP4SSL(imaplib.IMAP4_SSL):
     """IMAP4_SSL client that routes traffic through a SOCKS proxy."""
-    def __init__(self, host, port, proxy_addr, proxy_port, proxy_type=socks.SOCKS5):
+    def __init__(self, host, port, proxy_addr, proxy_port, ssl_context=None, proxy_type=socks.SOCKS5):
         self.proxy_addr = proxy_addr
         self.proxy_port = int(proxy_port)
         self.proxy_type = proxy_type
-        imaplib.IMAP4_SSL.__init__(self, host, port)
+        imaplib.IMAP4_SSL.__init__(self, host, port, ssl_context=ssl_context)
 
     def _create_socket(self, *args, **kwargs):
         timeout = kwargs.get('timeout')
@@ -52,7 +53,33 @@ class SocksIMAP4SSL(imaplib.IMAP4_SSL):
             sock.settimeout(timeout)
         sock.set_proxy(self.proxy_type, self.proxy_addr, self.proxy_port)
         sock.connect((self.host, self.port))
+
+        # Use the established ssl_context from the parent class
         return self.ssl_context.wrap_socket(sock, server_hostname=self.host)
+
+def get_robust_connection(server, user, pwd, proxy_info=None, max_retries=3):
+    """Establishes an IMAP connection with retries and robust SSL settings."""
+    # Create a lenient SSL context
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    # Ionos and others sometimes prefer specific TLS versions or have EOF issues
+    # This context configuration helps mitigate protocol violations.
+
+    for attempt in range(max_retries):
+        try:
+            if proxy_info:
+                mail = SocksIMAP4SSL(server, 993, proxy_info[0], proxy_info[1], ssl_context=context)
+            else:
+                mail = imaplib.IMAP4_SSL(server, 993, ssl_context=context)
+
+            mail.login(user, pwd)
+            return mail
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise e
+            time.sleep(2)
+    return None
 
 def get_hwid():
     """Generates a simple Hardware ID based on the system's MAC address."""
@@ -181,68 +208,84 @@ def list_mailboxes(mail):
         pass
     return folders
 
-def process_single_email(email_id, username, password, server, proxy_info, folder):
-    """Worker function to process a single email."""
-    found_emails = set()
+def process_email_batch(email_ids, username, password, server, proxy_info, folder, stats, all_emails, lock, domain_to_mx):
+    """Worker function to process a batch of emails using a single connection."""
+    mail = None
     try:
-        # Each thread needs its own IMAP connection
-        if proxy_info:
-            mail = SocksIMAP4SSL(server, 993, proxy_info[0], proxy_info[1])
-        else:
-            mail = imaplib.IMAP4_SSL(server)
+        mail = get_robust_connection(server, username, password, proxy_info)
+        if not mail: return
 
-        mail.login(username, password)
         mail.select(f'"{folder}"')
 
-        # Use BODY.PEEK to keep emails unread
-        result, msg_data = mail.fetch(email_id, "(BODY.PEEK[])")
-        if result == 'OK':
-            raw_email = msg_data[0][1]
-            raw_email_string = raw_email.decode('utf-8', 'ignore')
-            email_message = email.message_from_string(raw_email_string)
+        email_regex = r"[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
 
-            # Advanced regex for better detection
-            email_regex = r"[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+        for email_id in email_ids:
+            try:
+                # Use BODY.PEEK to keep emails unread and avoid violations
+                result, msg_data = mail.fetch(email_id, "(BODY.PEEK[])")
+                if result == 'OK':
+                    raw_email = msg_data[0][1]
+                    raw_email_string = raw_email.decode('utf-8', 'ignore')
+                    email_message = email.message_from_string(raw_email_string)
 
-            for header in ['From', 'To', 'Cc', 'Bcc', 'Reply-To']:
-                header_value = email_message[header]
-                if header_value:
-                    emails = re.findall(email_regex, str(header_value))
-                    found_emails.update(emails)
+                    found_in_msg = set()
+                    for header in ['From', 'To', 'Cc', 'Bcc', 'Reply-To']:
+                        header_value = email_message[header]
+                        if header_value:
+                            emails = re.findall(email_regex, str(header_value))
+                            found_in_msg.update(emails)
 
-            for part in email_message.walk():
-                if part.get_content_type() in ["text/plain", "text/html"]:
-                    try:
-                        payload = part.get_payload(decode=True)
-                        if payload:
-                            body = payload.decode('utf-8', 'ignore')
-                            emails = re.findall(email_regex, body)
-                            found_emails.update(emails)
-                    except: continue
+                    for part in email_message.walk():
+                        if part.get_content_type() in ["text/plain", "text/html"]:
+                            payload = part.get_payload(decode=True)
+                            if payload:
+                                body = payload.decode('utf-8', 'ignore')
+                                emails = re.findall(email_regex, body)
+                                found_in_msg.update(emails)
 
-        mail.logout()
-    except:
+                    with lock:
+                        stats['processed'] += 1
+                        for em in found_in_msg:
+                            if em not in all_emails:
+                                all_emails.add(em)
+                                stats['found'] += 1
+
+                                # Process MX for display
+                                domain = em.split('@')[-1].lower()
+                                if domain not in domain_to_mx:
+                                    domain_to_mx[domain] = get_mx_server(domain)
+                                mx = domain_to_mx[domain]
+
+                                masked = mask_email(em)
+                                sys.stdout.write('\r' + ' ' * 120 + '\r')
+                                print(f"{Fore.BLUE}[{Fore.WHITE}{stats['found']}{Fore.BLUE}] "
+                                      f"{Fore.GREEN}{masked} "
+                                      f"{Fore.BLACK}{Style.BRIGHT}» {Fore.YELLOW}MX: {Fore.WHITE}{mx}")
+                        print_dashboard(stats)
+            except:
+                continue
+
+        try:
+            mail.logout()
+        except:
+            pass
+    except Exception as e:
+        # Batch failed, but we log for debug if needed
         pass
-    return found_emails
 
 def extract_emails_from_mailbox(username, password, server, proxy, folder, stats, limit=None, speed=10):
     """
-    Extracts email addresses using multiple threads.
+    Extracts email addresses using multiple threads with batch processing.
     """
     all_emails = set()
     stats['start_time'] = time.time()
 
     try:
         # Initial connection to get IDs
-        if proxy:
-            p_host, p_port = proxy.split(':')
-            mail = SocksIMAP4SSL(server, 993, p_host, p_port)
-            proxy_info = (p_host, p_port)
-        else:
-            mail = imaplib.IMAP4_SSL(server)
-            proxy_info = None
+        proxy_info = proxy.split(':') if proxy else None
+        mail = get_robust_connection(server, username, password, proxy_info)
+        if not mail: return set()
 
-        mail.login(username, password)
         mail.select(f'"{folder}"')
         result, data = mail.search(None, "ALL")
         email_ids = data[0].split()
@@ -255,40 +298,23 @@ def extract_emails_from_mailbox(username, password, server, proxy, folder, stats
         total = len(email_ids)
         print(f"{Fore.GREEN}Found {total} emails. Starting multi-threaded extraction ({speed} threads)...")
 
+        # Split email_ids into batches for efficiency and to avoid violations
+        num_workers = min(speed, len(email_ids))
+        if num_workers == 0: return []
+
+        batch_size = (len(email_ids) + num_workers - 1) // num_workers
+        batches = [email_ids[i:i + batch_size] for i in range(0, len(email_ids), batch_size)]
+
         lock = threading.Lock()
         domain_to_mx = {}
 
-        with ThreadPoolExecutor(max_workers=speed) as executor:
-            futures = {executor.submit(process_single_email, eid, username, password, server, proxy_info, folder): eid for eid in email_ids}
-            stats['active_threads'] = speed
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            stats['active_threads'] = num_workers
+            futures = [executor.submit(process_email_batch, batch, username, password, server, proxy_info, folder, stats, all_emails, lock, domain_to_mx) for batch in batches]
 
             for future in as_completed(futures):
-                found_in_msg = future.result()
-                with lock:
-                    stats['processed'] += 1
-                    for em in found_in_msg:
-                        if em not in all_emails:
-                            all_emails.add(em)
-                            stats['found'] += 1
+                future.result()
 
-                            # Beautiful real-time display
-                            domain = em.split('@')[-1].lower()
-                            if domain not in domain_to_mx:
-                                domain_to_mx[domain] = get_mx_server(domain)
-                            mx = domain_to_mx[domain]
-
-                            masked = mask_email(em)
-                            sys.stdout.write('\r' + ' ' * 120 + '\r') # Clear dashboard line
-                            print(f"{Fore.BLUE}[{Fore.WHITE}{stats['found']}{Fore.BLUE}] "
-                                  f"{Fore.GREEN}{masked} "
-                                  f"{Fore.BLACK}{Style.BRIGHT}» {Fore.YELLOW}MX: {Fore.WHITE}{mx}")
-
-                    print_dashboard(stats)
-
-        try:
-            mail.close()
-        except:
-            pass
         return all_emails
 
     except Exception as e:
@@ -341,13 +367,9 @@ if __name__ == "__main__":
         # Connection Phase
         print(f"\n{Fore.CYAN}Connecting to {server}...")
         try:
-            if selected_proxy:
-                p_host, p_port = selected_proxy.split(':')
-                mail = SocksIMAP4SSL(server, 993, p_host, p_port)
-            else:
-                mail = imaplib.IMAP4_SSL(server)
+            proxy_info = selected_proxy.split(':') if selected_proxy else None
+            mail = get_robust_connection(server, user, pwd, proxy_info)
 
-            mail.login(user, pwd)
             print(f"{Fore.GREEN}Connected Successfully!")
 
             # Folder Selection Phase
