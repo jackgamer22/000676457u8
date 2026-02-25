@@ -174,13 +174,14 @@ def print_dashboard(stats):
     speed = stats['processed'] / elapsed if elapsed > 0 else 0
 
     # Use spaces to clear the line before writing \r
-    sys.stdout.write('\r' + ' ' * 120 + '\r')
+    sys.stdout.write('\r' + ' ' * 150 + '\r')
     status_line = (f"{Fore.BLUE}[{Fore.WHITE}SCANNING{Fore.BLUE}] "
-                   f"{Fore.CYAN}Processed: {Fore.WHITE}{stats['processed']} "
+                   f"{Fore.YELLOW}Folder: {Fore.WHITE}{stats['current_folder']} "
+                   f"{Fore.BLUE}┃ {Fore.CYAN}Proc: {Fore.WHITE}{stats['processed']} "
                    f"{Fore.BLUE}┃ {Fore.GREEN}Found: {Fore.WHITE}{stats['found']} "
                    f"{Fore.BLUE}┃ {Fore.YELLOW}Speed: {Fore.WHITE}{speed:.2f} e/s "
-                   f"{Fore.BLUE}┃ {Fore.MAGENTA}Threads: {Fore.WHITE}{stats['active_threads']} "
-                   f"{Fore.BLUE}┃ {Fore.YELLOW}Proxy: {Fore.WHITE}{stats['current_proxy']}")
+                   f"{Fore.BLUE}┃ {Fore.MAGENTA}Thr: {Fore.WHITE}{stats['active_threads']} "
+                   f"{Fore.BLUE}┃ {Fore.YELLOW}Pxy: {Fore.WHITE}{stats['current_proxy']}")
     sys.stdout.write(status_line)
     sys.stdout.flush()
 
@@ -273,12 +274,13 @@ def process_email_batch(email_ids, username, password, server, proxy_info, folde
         # Batch failed, but we log for debug if needed
         pass
 
-def extract_emails_from_mailbox(username, password, server, proxy, folder, stats, limit=None, speed=10):
+def extract_emails_from_mailbox(username, password, server, proxy, folder, stats, all_emails, limit=None, speed=10):
     """
     Extracts email addresses using multiple threads with batch processing.
     """
-    all_emails = set()
-    stats['start_time'] = time.time()
+    stats['current_folder'] = folder
+    if not stats.get('start_time'):
+        stats['start_time'] = time.time()
 
     try:
         # Initial connection to get IDs
@@ -380,20 +382,26 @@ if __name__ == "__main__":
                 sys.exit()
 
             print(f"\n{Fore.YELLOW}Available Folders:")
+            print(f"  {Fore.GREEN}[*] ALL FOLDERS")
             for idx, folder in enumerate(folders):
                 print(f"  {Fore.WHITE}[{idx}] {folder}")
 
-            folder_choice = input(f"\n{Fore.CYAN}Select folder number to extract from [0]: {Fore.WHITE}").strip()
-            if not folder_choice:
-                folder_choice = 0
-            else:
-                folder_choice = int(folder_choice)
+            choice = input(f"\n{Fore.CYAN}Select folder number or '*' for all [0]: {Fore.WHITE}").strip()
 
-            target_folder = folders[folder_choice]
+            selected_folders = []
+            if choice == '*':
+                selected_folders = folders
+            else:
+                try:
+                    idx = int(choice) if choice else 0
+                    selected_folders = [folders[idx]]
+                except:
+                    print(f"{Fore.RED}Invalid selection. Defaulting to [0] {folders[0]}")
+                    selected_folders = [folders[0]]
 
             # Advanced targeted extraction: limit and speed
             print(f"\n{Fore.CYAN}--- ADVANCED SETTINGS ---")
-            limit_input = input(f"{Fore.YELLOW}Limit processing to last X emails (Leave blank for ALL): {Fore.WHITE}").strip()
+            limit_input = input(f"{Fore.YELLOW}Limit processing to last X emails PER FOLDER (Leave blank for ALL): {Fore.WHITE}").strip()
             limit = int(limit_input) if limit_input.isdigit() else None
 
             speed_input = input(f"{Fore.YELLOW}Extraction Speed (Concurrent threads) [10]: {Fore.WHITE}").strip()
@@ -404,11 +412,15 @@ if __name__ == "__main__":
                 'found': 0,
                 'current_proxy': selected_proxy if selected_proxy else 'Direct',
                 'active_threads': 0,
-                'start_time': 0
+                'start_time': time.time(),
+                'current_folder': ''
             }
 
-            # Extract emails using the advanced multi-threaded function
-            emails = extract_emails_from_mailbox(user, pwd, server, selected_proxy, target_folder, stats, limit, speed)
+            all_extracted = set()
+            for folder in selected_folders:
+                extract_emails_from_mailbox(user, pwd, server, selected_proxy, folder, stats, all_extracted, limit, speed)
+
+            emails = all_extracted
         except Exception as e:
             print(f"{Fore.RED}Connection/Login failed: {e}")
             sys.exit()
