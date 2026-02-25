@@ -39,7 +39,11 @@ class SocksIMAP4SSL(imaplib.IMAP4_SSL):
         self.proxy_type = proxy_type
         imaplib.IMAP4_SSL.__init__(self, host, port)
 
-    def _create_socket(self, timeout=None):
+    def _create_socket(self, *args, **kwargs):
+        timeout = kwargs.get('timeout')
+        if not timeout and args:
+            timeout = args[0]
+
         sock = socks.socksocket()
         if timeout is not None:
             sock.settimeout(timeout)
