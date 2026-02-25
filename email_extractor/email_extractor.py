@@ -11,6 +11,9 @@ import hashlib
 import random
 import socks
 import socket
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 # Initialize colorama
 init(autoreset=True)
@@ -114,9 +117,16 @@ def get_mx_server(domain):
         return "Unknown/No MX Record"
 
 def print_dashboard(stats):
-    """Prints a live dashboard line."""
+    """Prints a live dashboard line with advanced metrics."""
+    elapsed = time.time() - stats['start_time']
+    speed = stats['processed'] / elapsed if elapsed > 0 else 0
+
     sys.stdout.write('\r')
-    status_line = f"{Fore.CYAN}Processed: {stats['processed']} | {Fore.GREEN}Found: {stats['found']} | {Fore.YELLOW}Proxy: {stats['current_proxy']}"
+    status_line = (f"{Fore.CYAN}Processed: {stats['processed']} "
+                   f"| {Fore.GREEN}Found: {stats['found']} "
+                   f"| {Fore.YELLOW}Speed: {speed:.2f} e/s "
+                   f"| {Fore.MAGENTA}Threads: {stats['active_threads']} "
+                   f"| {Fore.WHITE}Proxy: {stats['current_proxy']}")
     sys.stdout.write(status_line)
     sys.stdout.flush()
 
@@ -144,34 +154,34 @@ def list_mailboxes(mail):
         pass
     return folders
 
-def extract_emails_from_mailbox(mail, folder, stats):
-    """
-    Extracts email addresses from the selected folder.
-    """
-    all_emails = set()
-
+def process_single_email(email_id, username, password, server, proxy_info, folder):
+    """Worker function to process a single email."""
+    found_emails = set()
     try:
-        print(f"{Fore.CYAN}Selecting folder: {Fore.WHITE}{folder}")
+        # Each thread needs its own IMAP connection
+        if proxy_info:
+            mail = SocksIMAP4SSL(server, 993, proxy_info[0], proxy_info[1])
+        else:
+            mail = imaplib.IMAP4_SSL(server)
+
+        mail.login(username, password)
         mail.select(f'"{folder}"')
 
-        result, data = mail.search(None, "ALL")
-        email_ids = data[0].split()
-
-        print(f"{Fore.GREEN}Found {len(email_ids)} emails in {folder}. Starting extraction...")
-
-        for i, email_id in enumerate(email_ids):
-            stats['processed'] = i + 1
-            result, msg_data = mail.fetch(email_id, "(RFC822)")
+        # Use BODY.PEEK to keep emails unread
+        result, msg_data = mail.fetch(email_id, "(BODY.PEEK[])")
+        if result == 'OK':
             raw_email = msg_data[0][1]
             raw_email_string = raw_email.decode('utf-8', 'ignore')
             email_message = email.message_from_string(raw_email_string)
 
-            found_in_msg = set()
-            for header in ['From', 'To', 'Cc', 'Bcc']:
+            # Advanced regex for better detection
+            email_regex = r"[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+            for header in ['From', 'To', 'Cc', 'Bcc', 'Reply-To']:
                 header_value = email_message[header]
                 if header_value:
-                    emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", str(header_value))
-                    found_in_msg.update(emails)
+                    emails = re.findall(email_regex, str(header_value))
+                    found_emails.update(emails)
 
             for part in email_message.walk():
                 if part.get_content_type() in ["text/plain", "text/html"]:
@@ -179,16 +189,60 @@ def extract_emails_from_mailbox(mail, folder, stats):
                         payload = part.get_payload(decode=True)
                         if payload:
                             body = payload.decode('utf-8', 'ignore')
-                            emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", body)
-                            found_in_msg.update(emails)
+                            emails = re.findall(email_regex, body)
+                            found_emails.update(emails)
                     except: continue
 
-            for em in found_in_msg:
-                if em not in all_emails:
-                    all_emails.add(em)
-                    stats['found'] += 1
+        mail.logout()
+    except:
+        pass
+    return found_emails
 
-            print_dashboard(stats)
+def extract_emails_from_mailbox(username, password, server, proxy, folder, stats, limit=None):
+    """
+    Extracts email addresses using multiple threads.
+    """
+    all_emails = set()
+    stats['start_time'] = time.time()
+
+    try:
+        # Initial connection to get IDs
+        if proxy:
+            p_host, p_port = proxy.split(':')
+            mail = SocksIMAP4SSL(server, 993, p_host, p_port)
+            proxy_info = (p_host, p_port)
+        else:
+            mail = imaplib.IMAP4_SSL(server)
+            proxy_info = None
+
+        mail.login(username, password)
+        mail.select(f'"{folder}"')
+        result, data = mail.search(None, "ALL")
+        email_ids = data[0].split()
+        mail.logout()
+
+        if limit and limit < len(email_ids):
+            print(f"{Fore.YELLOW}Limit set to {limit}. Processing most recent emails.")
+            email_ids = email_ids[-limit:]
+
+        total = len(email_ids)
+        print(f"{Fore.GREEN}Found {total} emails. Starting multi-threaded extraction (10 threads)...")
+
+        lock = threading.Lock()
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {executor.submit(process_single_email, eid, username, password, server, proxy_info, folder): eid for eid in email_ids}
+            stats['active_threads'] = 10
+
+            for future in as_completed(futures):
+                found_in_msg = future.result()
+                with lock:
+                    stats['processed'] += 1
+                    for em in found_in_msg:
+                        if em not in all_emails:
+                            all_emails.add(em)
+                            stats['found'] += 1
+                    print_dashboard(stats)
 
         try:
             mail.close()
@@ -272,9 +326,21 @@ if __name__ == "__main__":
 
             target_folder = folders[folder_choice]
 
-            stats = {'processed': 0, 'found': 0, 'current_proxy': selected_proxy if selected_proxy else 'Direct'}
-            emails = extract_emails_from_mailbox(mail, target_folder, stats)
-            mail.logout()
+            # Advanced targeted extraction: limit
+            print(f"\n{Fore.CYAN}--- ADVANCED SETTINGS ---")
+            limit_input = input(f"{Fore.YELLOW}Limit processing to last X emails (Leave blank for ALL): {Fore.WHITE}").strip()
+            limit = int(limit_input) if limit_input.isdigit() else None
+
+            stats = {
+                'processed': 0,
+                'found': 0,
+                'current_proxy': selected_proxy if selected_proxy else 'Direct',
+                'active_threads': 0,
+                'start_time': 0
+            }
+
+            # Extract emails using the advanced multi-threaded function
+            emails = extract_emails_from_mailbox(user, pwd, server, selected_proxy, target_folder, stats, limit)
         except Exception as e:
             print(f"{Fore.RED}Connection/Login failed: {e}")
             sys.exit()
