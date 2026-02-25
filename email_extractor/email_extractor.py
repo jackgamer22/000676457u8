@@ -39,8 +39,10 @@ class SocksIMAP4SSL(imaplib.IMAP4_SSL):
         self.proxy_type = proxy_type
         imaplib.IMAP4_SSL.__init__(self, host, port)
 
-    def _create_socket(self):
+    def _create_socket(self, timeout=None):
         sock = socks.socksocket()
+        if timeout is not None:
+            sock.settimeout(timeout)
         sock.set_proxy(self.proxy_type, self.proxy_addr, self.proxy_port)
         sock.connect((self.host, self.port))
         return self.ssl_context.wrap_socket(sock, server_hostname=self.host)
@@ -67,6 +69,20 @@ def verify_license():
         return True
     else:
         print(f"{Fore.RED}Invalid Token! Please check with admin.")
+        return False
+
+def validate_proxy(proxy, imap_server, timeout=5):
+    """Validates if a SOCKS5 proxy is live and can connect to the target IMAP server on port 993."""
+    try:
+        p_host, p_port = proxy.split(':')
+        sock = socks.socksocket()
+        sock.settimeout(timeout)
+        sock.set_proxy(socks.SOCKS5, p_host, int(p_port))
+        # We only check if we can establish a connection to port 993
+        sock.connect((imap_server, 993))
+        sock.close()
+        return True
+    except:
         return False
 
 def get_mx_server(domain):
@@ -177,10 +193,21 @@ if __name__ == "__main__":
         server = input(f"{Fore.YELLOW}Enter IMAP Server: {Fore.WHITE}")
 
         proxies = load_proxies()
-        selected_proxy = random.choice(proxies) if proxies else None
+        selected_proxy = None
 
-        if selected_proxy:
-            print(f"{Fore.CYAN}Using Proxy: {selected_proxy}")
+        if proxies:
+            print(f"{Fore.CYAN}Validating proxies from list...")
+            random.shuffle(proxies)
+            for p in proxies:
+                if validate_proxy(p, server):
+                    selected_proxy = p
+                    print(f"{Fore.GREEN}[LIVE] Found working proxy: {p}")
+                    break
+                else:
+                    print(f"{Fore.RED}[DEAD] Skipping proxy: {p}")
+
+            if not selected_proxy:
+                print(f"{Fore.RED}No live proxies found. Falling back to direct connection.")
         else:
             print(f"{Fore.YELLOW}No proxies found in proxies.txt. Using direct connection.")
 
