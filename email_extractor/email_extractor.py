@@ -93,6 +93,31 @@ def verify_license():
         print(f"{Fore.RED}Invalid Token! Please check with admin.")
         return False
 
+def mask_email(email_str):
+    """Partially masks an email address with ***."""
+    try:
+        user, domain = email_str.split('@')
+        if len(user) <= 3:
+            masked_user = user[0] + "***"
+        else:
+            masked_user = user[:2] + "***" + user[-1:]
+
+        domain_parts = domain.split('.')
+        if len(domain_parts) > 1:
+            # Mask the main part of the domain
+            main = domain_parts[0]
+            if len(main) <= 2:
+                masked_dom = main + "***"
+            else:
+                masked_dom = main[0] + "***" + main[-1]
+            masked_domain = masked_dom + "." + ".".join(domain_parts[1:])
+        else:
+            masked_domain = domain
+
+        return f"{masked_user}@{masked_domain}"
+    except:
+        return email_str[:4] + "***"
+
 def validate_proxy(proxy, imap_server, timeout=5):
     """Validates if a SOCKS5 proxy is live and can connect to the target IMAP server on port 993."""
     try:
@@ -123,11 +148,12 @@ def print_dashboard(stats):
 
     # Use spaces to clear the line before writing \r
     sys.stdout.write('\r' + ' ' * 120 + '\r')
-    status_line = (f"{Fore.CYAN}Processed: {stats['processed']} "
-                   f"| {Fore.GREEN}Found: {stats['found']} "
-                   f"| {Fore.YELLOW}Speed: {speed:.2f} e/s "
-                   f"| {Fore.MAGENTA}Threads: {stats['active_threads']} "
-                   f"| {Fore.WHITE}Proxy: {stats['current_proxy']}")
+    status_line = (f"{Fore.BLUE}[{Fore.WHITE}SCANNING{Fore.BLUE}] "
+                   f"{Fore.CYAN}Processed: {Fore.WHITE}{stats['processed']} "
+                   f"{Fore.BLUE}┃ {Fore.GREEN}Found: {Fore.WHITE}{stats['found']} "
+                   f"{Fore.BLUE}┃ {Fore.YELLOW}Speed: {Fore.WHITE}{speed:.2f} e/s "
+                   f"{Fore.BLUE}┃ {Fore.MAGENTA}Threads: {Fore.WHITE}{stats['active_threads']} "
+                   f"{Fore.BLUE}┃ {Fore.YELLOW}Proxy: {Fore.WHITE}{stats['current_proxy']}")
     sys.stdout.write(status_line)
     sys.stdout.flush()
 
@@ -230,6 +256,7 @@ def extract_emails_from_mailbox(username, password, server, proxy, folder, stats
         print(f"{Fore.GREEN}Found {total} emails. Starting multi-threaded extraction ({speed} threads)...")
 
         lock = threading.Lock()
+        domain_to_mx = {}
 
         with ThreadPoolExecutor(max_workers=speed) as executor:
             futures = {executor.submit(process_single_email, eid, username, password, server, proxy_info, folder): eid for eid in email_ids}
@@ -239,18 +266,22 @@ def extract_emails_from_mailbox(username, password, server, proxy, folder, stats
                 found_in_msg = future.result()
                 with lock:
                     stats['processed'] += 1
-                    new_finds = []
                     for em in found_in_msg:
                         if em not in all_emails:
                             all_emails.add(em)
                             stats['found'] += 1
-                            new_finds.append(em)
 
-                    # Real-time output: show as it extracts
-                    if new_finds:
-                        sys.stdout.write('\r' + ' ' * 120 + '\r') # Clear dashboard line
-                        for em in new_finds:
-                            print(f"{Fore.GREEN}[FOUND]{Fore.WHITE} {em}")
+                            # Beautiful real-time display
+                            domain = em.split('@')[-1].lower()
+                            if domain not in domain_to_mx:
+                                domain_to_mx[domain] = get_mx_server(domain)
+                            mx = domain_to_mx[domain]
+
+                            masked = mask_email(em)
+                            sys.stdout.write('\r' + ' ' * 120 + '\r') # Clear dashboard line
+                            print(f"{Fore.BLUE}[{Fore.WHITE}{stats['found']}{Fore.BLUE}] "
+                                  f"{Fore.GREEN}{masked} "
+                                  f"{Fore.BLACK}{Style.BRIGHT}» {Fore.YELLOW}MX: {Fore.WHITE}{mx}")
 
                     print_dashboard(stats)
 
