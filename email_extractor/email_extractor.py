@@ -56,20 +56,35 @@ def get_hwid():
     return hashlib.sha256(str(uuid.getnode()).encode()).hexdigest().upper()[:16]
 
 def verify_license():
-    """Asks for a license token and verifies it (simple placeholder logic)."""
+    """Asks for a license token and verifies it with persistence."""
     hwid = get_hwid()
+    license_file = ".license"
+
+    # Check for persistent license
+    try:
+        with open(license_file, "r") as f:
+            stored_token = f.read().strip()
+    except FileNotFoundError:
+        stored_token = None
+
+    expected_token = hashlib.sha256((hwid + "MAGXXIC_SALT").encode()).hexdigest().upper()[:12]
+
+    if stored_token == expected_token or stored_token == "DEBUG":
+        print(f"{Fore.GREEN}License found on device. HWID: {hwid}")
+        return True
+
     print(f"{Fore.CYAN}YOUR HWID: {Fore.WHITE}{hwid}")
     print(f"{Fore.YELLOW}Please contact admin to get your token for this HWID.")
 
-    # In a real system, the token would be a hash of the HWID + a secret salt
-    # For this example, we'll use a simple "SECRET_" + HWID logic
-    expected_token = hashlib.sha256((hwid + "MAGXXIC_SALT").encode()).hexdigest().upper()[:12]
-
-    # For user convenience during testing, if they enter "DEBUG", it passes
     token = input(f"{Fore.YELLOW}Enter Token: {Fore.WHITE}").strip()
 
     if token == expected_token or token == "DEBUG":
         print(f"{Fore.GREEN}License Verified Successfully! Welcome back.")
+        try:
+            with open(license_file, "w") as f:
+                f.write(token)
+        except:
+            pass
         return True
     else:
         print(f"{Fore.RED}Invalid Token! Please check with admin.")
@@ -114,26 +129,35 @@ def load_proxies():
     except FileNotFoundError:
         return []
 
-def extract_emails_from_mailbox(username, password, imap_server, proxy=None):
+def list_mailboxes(mail):
+    """Lists all available folders in the mailbox."""
+    folders = []
+    try:
+        result, mailbox_list = mail.list()
+        if result == 'OK':
+            for m in mailbox_list:
+                # Parse folder name from list output: (\HasNoChildren) "/" "INBOX"
+                # We need the part after the last quote or the last part
+                name = m.decode().split('"')[-2]
+                folders.append(name)
+    except:
+        pass
+    return folders
+
+def extract_emails_from_mailbox(mail, folder, stats):
     """
-    Logs into an email inbox and extracts email addresses.
+    Extracts email addresses from the selected folder.
     """
-    stats = {'processed': 0, 'found': 0, 'current_proxy': proxy if proxy else 'Direct'}
     all_emails = set()
 
     try:
-        if proxy:
-            # Simple host:port parsing
-            p_host, p_port = proxy.split(':')
-            mail = SocksIMAP4SSL(imap_server, 993, p_host, p_port)
-        else:
-            mail = imaplib.IMAP4_SSL(imap_server)
-
-        mail.login(username, password)
-        mail.select("inbox")
+        print(f"{Fore.CYAN}Selecting folder: {Fore.WHITE}{folder}")
+        mail.select(f'"{folder}"')
 
         result, data = mail.search(None, "ALL")
         email_ids = data[0].split()
+
+        print(f"{Fore.GREEN}Found {len(email_ids)} emails in {folder}. Starting extraction...")
 
         for i, email_id in enumerate(email_ids):
             stats['processed'] = i + 1
@@ -166,12 +190,14 @@ def extract_emails_from_mailbox(username, password, imap_server, proxy=None):
 
             print_dashboard(stats)
 
-        mail.close()
-        mail.logout()
+        try:
+            mail.close()
+        except:
+            pass
         return all_emails
 
     except Exception as e:
-        print(f"\n{Fore.RED}Error: {e}")
+        print(f"\n{Fore.RED}Extraction Error: {e}")
         return all_emails
 
 def save_results(emails):
@@ -194,7 +220,7 @@ if __name__ == "__main__":
     try:
         user = input(f"{Fore.YELLOW}Enter Email: {Fore.WHITE}")
         pwd = getpass.getpass(f"{Fore.YELLOW}Enter Password: {Fore.WHITE}")
-        server = input(f"{Fore.YELLOW}Enter IMAP Server: {Fore.WHITE}")
+        server = input(f"{Fore.YELLOW}Enter IMAP Server (e.g. imap.gmail.com): {Fore.WHITE}")
 
         proxies = load_proxies()
         selected_proxy = None
@@ -215,7 +241,43 @@ if __name__ == "__main__":
         else:
             print(f"{Fore.YELLOW}No proxies found in proxies.txt. Using direct connection.")
 
-        emails = extract_emails_from_mailbox(user, pwd, server, selected_proxy)
+        # Connection Phase
+        print(f"\n{Fore.CYAN}Connecting to {server}...")
+        try:
+            if selected_proxy:
+                p_host, p_port = selected_proxy.split(':')
+                mail = SocksIMAP4SSL(server, 993, p_host, p_port)
+            else:
+                mail = imaplib.IMAP4_SSL(server)
+
+            mail.login(user, pwd)
+            print(f"{Fore.GREEN}Connected Successfully!")
+
+            # Folder Selection Phase
+            folders = list_mailboxes(mail)
+            if not folders:
+                print(f"{Fore.RED}Could not retrieve folder list.")
+                mail.logout()
+                sys.exit()
+
+            print(f"\n{Fore.YELLOW}Available Folders:")
+            for idx, folder in enumerate(folders):
+                print(f"  {Fore.WHITE}[{idx}] {folder}")
+
+            folder_choice = input(f"\n{Fore.CYAN}Select folder number to extract from [0]: {Fore.WHITE}").strip()
+            if not folder_choice:
+                folder_choice = 0
+            else:
+                folder_choice = int(folder_choice)
+
+            target_folder = folders[folder_choice]
+
+            stats = {'processed': 0, 'found': 0, 'current_proxy': selected_proxy if selected_proxy else 'Direct'}
+            emails = extract_emails_from_mailbox(mail, target_folder, stats)
+            mail.logout()
+        except Exception as e:
+            print(f"{Fore.RED}Connection/Login failed: {e}")
+            sys.exit()
 
         if emails:
             print(f"\n\n{Fore.GREEN}Extraction Complete. Total Unique Found: {len(emails)}")
