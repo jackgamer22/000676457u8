@@ -121,7 +121,8 @@ def print_dashboard(stats):
     elapsed = time.time() - stats['start_time']
     speed = stats['processed'] / elapsed if elapsed > 0 else 0
 
-    sys.stdout.write('\r')
+    # Use spaces to clear the line before writing \r
+    sys.stdout.write('\r' + ' ' * 120 + '\r')
     status_line = (f"{Fore.CYAN}Processed: {stats['processed']} "
                    f"| {Fore.GREEN}Found: {stats['found']} "
                    f"| {Fore.YELLOW}Speed: {speed:.2f} e/s "
@@ -198,7 +199,7 @@ def process_single_email(email_id, username, password, server, proxy_info, folde
         pass
     return found_emails
 
-def extract_emails_from_mailbox(username, password, server, proxy, folder, stats, limit=None):
+def extract_emails_from_mailbox(username, password, server, proxy, folder, stats, limit=None, speed=10):
     """
     Extracts email addresses using multiple threads.
     """
@@ -226,22 +227,31 @@ def extract_emails_from_mailbox(username, password, server, proxy, folder, stats
             email_ids = email_ids[-limit:]
 
         total = len(email_ids)
-        print(f"{Fore.GREEN}Found {total} emails. Starting multi-threaded extraction (10 threads)...")
+        print(f"{Fore.GREEN}Found {total} emails. Starting multi-threaded extraction ({speed} threads)...")
 
         lock = threading.Lock()
 
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=speed) as executor:
             futures = {executor.submit(process_single_email, eid, username, password, server, proxy_info, folder): eid for eid in email_ids}
-            stats['active_threads'] = 10
+            stats['active_threads'] = speed
 
             for future in as_completed(futures):
                 found_in_msg = future.result()
                 with lock:
                     stats['processed'] += 1
+                    new_finds = []
                     for em in found_in_msg:
                         if em not in all_emails:
                             all_emails.add(em)
                             stats['found'] += 1
+                            new_finds.append(em)
+
+                    # Real-time output: show as it extracts
+                    if new_finds:
+                        sys.stdout.write('\r' + ' ' * 120 + '\r') # Clear dashboard line
+                        for em in new_finds:
+                            print(f"{Fore.GREEN}[FOUND]{Fore.WHITE} {em}")
+
                     print_dashboard(stats)
 
         try:
@@ -254,17 +264,19 @@ def extract_emails_from_mailbox(username, password, server, proxy, folder, stats
         print(f"\n{Fore.RED}Extraction Error: {e}")
         return all_emails
 
-def save_results(emails):
-    """Saves the extracted emails to results.txt."""
+def save_results(emails, filename="extracted_contacts.txt"):
+    """Saves the extracted emails to a text file."""
     if not emails:
         print(f"{Fore.YELLOW}No emails found to save.")
         return
 
-    filename = "results.txt"
-    with open(filename, "w") as f:
-        for em in sorted(list(emails)):
-            f.write(em + "\n")
-    print(f"\n{Fore.GREEN}Successfully saved {len(emails)} unique emails to {filename}")
+    try:
+        with open(filename, "w") as f:
+            for em in sorted(list(emails)):
+                f.write(em + "\n")
+        print(f"\n{Fore.GREEN}Successfully saved {len(emails)} unique emails to {filename}")
+    except Exception as e:
+        print(f"{Fore.RED}Failed to save to {filename}: {e}")
 
 if __name__ == "__main__":
     print(BANNER)
@@ -326,10 +338,13 @@ if __name__ == "__main__":
 
             target_folder = folders[folder_choice]
 
-            # Advanced targeted extraction: limit
+            # Advanced targeted extraction: limit and speed
             print(f"\n{Fore.CYAN}--- ADVANCED SETTINGS ---")
             limit_input = input(f"{Fore.YELLOW}Limit processing to last X emails (Leave blank for ALL): {Fore.WHITE}").strip()
             limit = int(limit_input) if limit_input.isdigit() else None
+
+            speed_input = input(f"{Fore.YELLOW}Extraction Speed (Concurrent threads) [10]: {Fore.WHITE}").strip()
+            speed = int(speed_input) if speed_input.isdigit() and int(speed_input) > 0 else 10
 
             stats = {
                 'processed': 0,
@@ -340,7 +355,7 @@ if __name__ == "__main__":
             }
 
             # Extract emails using the advanced multi-threaded function
-            emails = extract_emails_from_mailbox(user, pwd, server, selected_proxy, target_folder, stats, limit)
+            emails = extract_emails_from_mailbox(user, pwd, server, selected_proxy, target_folder, stats, limit, speed)
         except Exception as e:
             print(f"{Fore.RED}Connection/Login failed: {e}")
             sys.exit()
@@ -364,9 +379,14 @@ if __name__ == "__main__":
                 for dom, ems in sorted(domains.items()):
                     print(f"  {Fore.CYAN}Domain: {Fore.WHITE}{dom} ({len(ems)})")
 
-            save_choice = input(f"\n{Fore.YELLOW}Do you want to save results? (y/n): {Fore.WHITE}").lower()
+            save_choice = input(f"\n{Fore.YELLOW}Do you want to export extracted contacts? (y/n): {Fore.WHITE}").lower()
             if save_choice == 'y':
-                save_results(emails)
+                filename = input(f"{Fore.YELLOW}Enter filename [.txt]: {Fore.WHITE}").strip()
+                if not filename:
+                    filename = "extracted_contacts.txt"
+                if not filename.endswith(".txt"):
+                    filename += ".txt"
+                save_results(emails, filename)
         else:
             print(f"\n{Fore.RED}No emails extracted.")
 
