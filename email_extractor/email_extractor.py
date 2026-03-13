@@ -19,19 +19,25 @@ import threading
 # Initialize colorama
 init(autoreset=True)
 
-BANNER = f"""
+BANNER = fr"""
 {Fore.MAGENTA}{Style.BRIGHT}
- ███    ███  █████   ██████  ██   ██ ██   ██ ██  ██████
- ████  ████ ██   ██ ██       ██  ██   ██ ██  ██ ██
- ██ ████ ██ ███████ ██   ███  █████     ███   ██ ██
- ██  ██  ██ ██   ██ ██    ██ ██  ██   ██ ██  ██ ██
- ██      ██ ██   ██  ██████  ██   ██ ██   ██ ██  ██████
+    __  ______   _______  ___  __ ___________    ______  ______
+   /  |/  /   | / ____/ |/ / |/ //  _/ ____/ |  / / __ \/_  __/
+  / /|_/ / /| |/ / __ |   /|   / / // /    | | / / / / / / /
+ / /  / / ___ / /_/ //   |/   |_/ // /___  | |/ / /_/ / / /
+/_/  /_/_/  |_\____//_/|_/_/|_/___/\____/  |___/\____/ /_/
 
-      ███████ ██    ██  ██████ ██   ██ ██████  ██████
-      ██      ██    ██ ██      ██  ██       ██ ██   ██
-      ███████ ██    ██ ██      █████    █████  ██████
-           ██  ██  ██  ██      ██  ██       ██ ██   ██
-      ███████   ████    ██████ ██   ██ ██████  ██   ██
+    ________  ______    ______       __________  _   ___________   ____________
+   / ____/  |/  /   |  /  _/ /      / ____/ __ \/ | / /_  __/   | / ____/_  __/
+  / __/ / /|_/ / /| |  / // /      / /   / / / /  |/ / / / / /| |/ /     / /
+ / /___/ /  / / ___ |_/ // /___   / /___/ /_/ / /|  / / / / ___ / /___  / /
+/_____/_/  /_/_/  |_/___/_____/   \____/\____/_/ |_/ /_/ /_/  |_\____/ /_/
+
+   ______    __________ __ __________
+  / ___/ |  / / ____/ //_// ____/ __ \
+  \__ \| | / / /   / ,<  / __/ / /_/ /
+ ___/ /| |/ / /___/ /| |/ /___/ _, _/
+/____/ |___/\____/_/ |_/_____/_/ |_|
 {Style.RESET_ALL}
 """
 
@@ -121,29 +127,43 @@ def verify_license():
         return False
 
 def mask_email(email_str):
-    """Partially masks an email address with ***."""
+    """Partially masks an email address in the format info@t******.com."""
     try:
         user, domain = email_str.split('@')
-        if len(user) <= 3:
-            masked_user = user[0] + "***"
-        else:
-            masked_user = user[:2] + "***" + user[-1:]
 
         domain_parts = domain.split('.')
         if len(domain_parts) > 1:
-            # Mask the main part of the domain
+            # Mask the main part of the domain (the name before the first dot)
             main = domain_parts[0]
-            if len(main) <= 2:
-                masked_dom = main + "***"
-            else:
-                masked_dom = main[0] + "***" + main[-1]
+            # Use the first character of the domain name and then 6 stars
+            masked_dom = main[0] + "******"
             masked_domain = masked_dom + "." + ".".join(domain_parts[1:])
         else:
-            masked_domain = domain
+            masked_domain = domain[0] + "******"
 
-        return f"{masked_user}@{masked_domain}"
+        return f"{user}@{masked_domain}"
     except:
-        return email_str[:4] + "***"
+        return email_str.split('@')[0] + "@******"
+
+def detect_imap_server(email_addr):
+    """Suggests an IMAP server based on the email domain."""
+    try:
+        domain = email_addr.split('@')[-1].lower()
+        # Common providers
+        common = {
+            "gmail.com": "imap.gmail.com",
+            "yahoo.com": "imap.mail.yahoo.com",
+            "outlook.com": "outlook.office365.com",
+            "hotmail.com": "outlook.office365.com",
+            "icloud.com": "imap.mail.me.com",
+            "ionos.com": "imap.ionos.com",
+            "ionos.co.uk": "imap.ionos.co.uk"
+        }
+        if domain in common:
+            return common[domain]
+        return f"imap.{domain}"
+    except:
+        return ""
 
 def validate_proxy(proxy, imap_server, timeout=5):
     """Validates if a SOCKS5 proxy is live and can connect to the target IMAP server on port 993."""
@@ -172,13 +192,14 @@ def print_dashboard(stats):
     """Prints a live dashboard line with advanced metrics."""
     elapsed = time.time() - stats['start_time']
     speed = stats['processed'] / elapsed if elapsed > 0 else 0
+    ratio = (stats['found'] / stats['processed'] * 100) if stats['processed'] > 0 else 0
 
     # Use spaces to clear the line before writing \r
-    sys.stdout.write('\r' + ' ' * 150 + '\r')
+    sys.stdout.write('\r' + ' ' * 160 + '\r')
     status_line = (f"{Fore.BLUE}[{Fore.WHITE}SCANNING{Fore.BLUE}] "
-                   f"{Fore.YELLOW}Folder: {Fore.WHITE}{stats['current_folder']} "
+                   f"{Fore.YELLOW}Folder: {Fore.WHITE}{stats['current_folder'][:10]:<10} "
                    f"{Fore.BLUE}┃ {Fore.CYAN}Proc: {Fore.WHITE}{stats['processed']} "
-                   f"{Fore.BLUE}┃ {Fore.GREEN}Found: {Fore.WHITE}{stats['found']} "
+                   f"{Fore.BLUE}┃ {Fore.GREEN}Found: {Fore.WHITE}{stats['found']} ({ratio:.1f}%) "
                    f"{Fore.BLUE}┃ {Fore.YELLOW}Speed: {Fore.WHITE}{speed:.2f} e/s "
                    f"{Fore.BLUE}┃ {Fore.MAGENTA}Thr: {Fore.WHITE}{stats['active_threads']} "
                    f"{Fore.BLUE}┃ {Fore.YELLOW}Pxy: {Fore.WHITE}{stats['current_proxy']}")
@@ -258,10 +279,11 @@ def process_email_batch(email_ids, username, password, server, proxy_info, folde
                                 mx = domain_to_mx[domain]
 
                                 masked = mask_email(em)
-                                sys.stdout.write('\r' + ' ' * 120 + '\r')
+                                sys.stdout.write('\r' + ' ' * 150 + '\r')
                                 print(f"{Fore.BLUE}[{Fore.WHITE}{stats['found']}{Fore.BLUE}] "
-                                      f"{Fore.GREEN}{masked} "
-                                      f"{Fore.BLACK}{Style.BRIGHT}» {Fore.YELLOW}MX: {Fore.WHITE}{mx}")
+                                      f"{Fore.CYAN}Folder: {Fore.WHITE}{folder:<12} "
+                                      f"{Fore.BLUE}┃ {Fore.GREEN}{masked:<25} "
+                                      f"{Fore.BLUE}┃ {Fore.YELLOW}MX: {Fore.WHITE}{mx}")
                         print_dashboard(stats)
             except:
                 continue
@@ -343,9 +365,18 @@ if __name__ == "__main__":
         sys.exit()
 
     try:
-        user = input(f"{Fore.YELLOW}Enter Email: {Fore.WHITE}")
+        user = input(f"{Fore.YELLOW}Enter Email: {Fore.WHITE}").strip()
         pwd = getpass.getpass(f"{Fore.YELLOW}Enter Password: {Fore.WHITE}")
-        server = input(f"{Fore.YELLOW}Enter IMAP Server (e.g. imap.gmail.com): {Fore.WHITE}")
+
+        auto_toggle = input(f"{Fore.YELLOW}Auto-detect IMAP settings? (y/n) [y]: {Fore.WHITE}").lower() != 'n'
+
+        if auto_toggle:
+            suggested_server = detect_imap_server(user)
+            server = input(f"{Fore.YELLOW}Enter IMAP Server [{Fore.WHITE}{suggested_server}{Fore.YELLOW}]: {Fore.WHITE}").strip()
+            if not server:
+                server = suggested_server
+        else:
+            server = input(f"{Fore.YELLOW}Enter IMAP Server: {Fore.WHITE}").strip()
 
         proxies = load_proxies()
         selected_proxy = None
