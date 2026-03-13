@@ -386,17 +386,39 @@ if __name__ == "__main__":
             for idx, folder in enumerate(folders):
                 print(f"  {Fore.WHITE}[{idx}] {folder}")
 
-            choice = input(f"\n{Fore.CYAN}Select folder number or '*' for all [0]: {Fore.WHITE}").strip()
+            choice = input(f"\n{Fore.CYAN}Select folder (Number, Name, or '*' for all) [0]: {Fore.WHITE}").strip()
 
             selected_folders = []
             if choice == '*':
                 selected_folders = folders
-            else:
-                try:
-                    idx = int(choice) if choice else 0
-                    selected_folders = [folders[idx]]
-                except:
-                    print(f"{Fore.RED}Invalid selection. Defaulting to [0] {folders[0]}")
+            elif choice:
+                # Check if it's a list of choices (comma-separated)
+                parts = [p.strip() for p in choice.split(',')]
+                for part in parts:
+                    # Try index
+                    if part.isdigit():
+                        idx = int(part)
+                        if 0 <= idx < len(folders):
+                            if folders[idx] not in selected_folders:
+                                selected_folders.append(folders[idx])
+                    else:
+                        # Try case-insensitive name match
+                        found = False
+                        for f in folders:
+                            if part.lower() == f.lower():
+                                if f not in selected_folders:
+                                    selected_folders.append(f)
+                                found = True
+                                break
+                        if not found:
+                            print(f"{Fore.RED}Folder '{part}' not found. Skipping.")
+
+            if not selected_folders:
+                # Default to index 0 if nothing valid selected
+                if not choice or not choice.strip():
+                    selected_folders = [folders[0]]
+                else:
+                    print(f"{Fore.RED}No valid folders selected. Defaulting to [0] {folders[0]}")
                     selected_folders = [folders[0]]
 
             # Advanced targeted extraction: limit and speed
