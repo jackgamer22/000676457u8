@@ -1,7 +1,7 @@
 @echo off
-title MAGXXIC EMAIL SVCK3R - Setup and Start
+title MAGXXICVOT EMAIL CONTACT SVCKER - Setup and Start
 echo ==========================================
-echo    MAGXXIC EMAIL SVCK3R SETUP
+echo    MAGXXICVOT EMAIL CONTACT SVCKER SETUP
 echo ==========================================
 echo.
 echo Installing requirements...
